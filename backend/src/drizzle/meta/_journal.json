@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1757357613018,
+      "tag": "20250908185333_lyrical_kitty_pryde",
+      "breakpoints": true
+    }
+  ]
+}
