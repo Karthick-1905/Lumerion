@@ -1,9 +1,12 @@
-import express, { Router } from 'express'
-import { getUserProfile } from '../controller/userController'
-const user_router = Router();
+import { Router } from "express";
+import { getLearningPath, getLearningPaths, getUserProfile, updateLearningPath } from "../controller/userController";
 
-user_router.route('/profile').get(getUserProfile)
+const userRouter = Router();
 
+userRouter.get("/profile", getUserProfile);
+userRouter.get("/learning-paths", getLearningPaths);
+userRouter.get("/learning-paths/:pathId", getLearningPath);
+userRouter.patch("/learning-paths/:pathId", updateLearningPath);
 
-export default user_router;
+export default userRouter;
 
