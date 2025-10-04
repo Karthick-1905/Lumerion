@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, friendRequest, studyGroup, studyGroupMembership, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens } from "./schema";
+import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, studyGroupMembership, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens, friendRequest, userFriend } from "./schema";
 
 export const moduleDependencyRelations = relations(moduleDependency, ({one}) => ({
 	learningModule: one(learningModule, {
@@ -28,12 +28,6 @@ export const usersRelations = relations(users, ({many}) => ({
 	userEmailVerifications: many(userEmailVerification),
 	learningPaths: many(learningPath),
 	userModuleProgresses: many(userModuleProgress),
-	friendRequests_senderId: many(friendRequest, {
-		relationName: "friendRequest_senderId_users_userId"
-	}),
-	friendRequests_receiverId: many(friendRequest, {
-		relationName: "friendRequest_receiverId_users_userId"
-	}),
 	studyGroups: many(studyGroup),
 	studyGroupMemberships: many(studyGroupMembership),
 	studyNotes_userId: many(studyNote, {
@@ -48,6 +42,18 @@ export const usersRelations = relations(users, ({many}) => ({
 	metaInteractionGroupMembers: many(metaInteractionGroupMembers),
 	metaInteractionLogs: many(metaInteractionLog),
 	passwordResetTokens: many(passwordResetTokens),
+	friendRequests_senderId: many(friendRequest, {
+		relationName: "friendRequest_senderId_users_userId"
+	}),
+	friendRequests_receiverId: many(friendRequest, {
+		relationName: "friendRequest_receiverId_users_userId"
+	}),
+	userFriends_userId: many(userFriend, {
+		relationName: "userFriend_userId_users_userId"
+	}),
+	userFriends_friendUserId: many(userFriend, {
+		relationName: "userFriend_friendUserId_users_userId"
+	}),
 }));
 
 export const userEmailVerificationRelations = relations(userEmailVerification, ({one}) => ({
@@ -107,23 +113,14 @@ export const userModuleProgressRelations = relations(userModuleProgress, ({one})
 	}),
 }));
 
-export const friendRequestRelations = relations(friendRequest, ({one}) => ({
-	user_senderId: one(users, {
-		fields: [friendRequest.senderId],
-		references: [users.userId],
-		relationName: "friendRequest_senderId_users_userId"
-	}),
-	user_receiverId: one(users, {
-		fields: [friendRequest.receiverId],
-		references: [users.userId],
-		relationName: "friendRequest_receiverId_users_userId"
-	}),
-}));
-
 export const studyGroupRelations = relations(studyGroup, ({one, many}) => ({
 	user: one(users, {
 		fields: [studyGroup.createdBy],
 		references: [users.userId]
+	}),
+	learningPath: one(learningPath, {
+		fields: [studyGroup.pathId],
+		references: [learningPath.pathId]
 	}),
 	studyGroupMemberships: many(studyGroupMembership),
 	studyNotes: many(studyNote),
@@ -236,5 +233,31 @@ export const passwordResetTokensRelations = relations(passwordResetTokens, ({one
 	user: one(users, {
 		fields: [passwordResetTokens.userId],
 		references: [users.userId]
+	}),
+}));
+
+export const friendRequestRelations = relations(friendRequest, ({one}) => ({
+	user_senderId: one(users, {
+		fields: [friendRequest.senderId],
+		references: [users.userId],
+		relationName: "friendRequest_senderId_users_userId"
+	}),
+	user_receiverId: one(users, {
+		fields: [friendRequest.receiverId],
+		references: [users.userId],
+		relationName: "friendRequest_receiverId_users_userId"
+	}),
+}));
+
+export const userFriendRelations = relations(userFriend, ({one}) => ({
+	user_userId: one(users, {
+		fields: [userFriend.userId],
+		references: [users.userId],
+		relationName: "userFriend_userId_users_userId"
+	}),
+	user_friendUserId: one(users, {
+		fields: [userFriend.friendUserId],
+		references: [users.userId],
+		relationName: "userFriend_friendUserId_users_userId"
 	}),
 }));

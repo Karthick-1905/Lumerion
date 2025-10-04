@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, jsonb, integer, timestamp, foreignKey, boolean, unique, numeric, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, text, jsonb, integer, timestamp, foreignKey, boolean, unique, numeric, primaryKey, pgEnum, customType } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const actionEnum = pgEnum("action_enum", ['joined', 'left', 'started_whiteboard', 'ended_whiteboard', 'sent_message'])
@@ -7,10 +7,18 @@ export const difficultyLevel = pgEnum("difficulty_level", ['easy', 'medium', 'ha
 export const interactionEnum = pgEnum("interaction_enum", ['audio_video', 'whiteboard', 'chat'])
 export const noteType = pgEnum("note_type", ['text', 'document', 'link', 'multimedia'])
 export const presenceEnum = pgEnum("presence_enum", ['online', 'offline', 'away', 'busy'])
-export const roleEnum = pgEnum("role_enum", ['admin', 'moderator', 'member'])
+export const roleEnum = pgEnum("role_enum", ['owner', 'admin', 'moderator', 'member'])
+export const groupMemberStatusEnum = pgEnum("group_member_status", ['pending', 'active', 'removed'])
 export const statusEnum = pgEnum("status_enum", ['pending', 'accepted', 'rejected', 'blocked'])
 export const visibilityEnum = pgEnum("visibility_enum", ['public', 'private', 'restricted'])
 export const visibilityScope = pgEnum("visibility_scope", ['private', 'group', 'public'])
+
+
+const bytea = customType<{ data: Buffer | null; driverData: Buffer | null }>({
+	dataType() {
+		return "bytea";
+	},
+});
 
 
 export const learningModule = pgTable("learning_module", {
@@ -185,40 +193,27 @@ export const userModuleProgress = pgTable("user_module_progress", {
 	unique("user_module_progress_user_id_module_id_path_id_key").on(table.userId, table.moduleId, table.pathId),
 ]);
 
-export const friendRequest = pgTable("friend_request", {
-	requestId: serial("request_id").primaryKey().notNull(),
-	senderId: integer("sender_id").notNull(),
-	receiverId: integer("receiver_id").notNull(),
-	status: statusEnum().default('pending'),
-	sentAt: timestamp("sent_at", { mode: 'string' }).defaultNow(),
-	acceptedAt: timestamp("accepted_at", { mode: 'string' }),
-}, (table) => [
-	foreignKey({
-			columns: [table.senderId],
-			foreignColumns: [users.userId],
-			name: "friend_request_sender_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.receiverId],
-			foreignColumns: [users.userId],
-			name: "friend_request_receiver_id_fkey"
-		}).onDelete("cascade"),
-]);
-
 export const studyGroup = pgTable("study_group", {
 	groupId: serial("group_id").primaryKey().notNull(),
 	groupName: varchar("group_name", { length: 255 }).notNull(),
 	createdBy: integer("created_by").notNull(),
+	pathId: integer("path_id").notNull(),
 	description: text(),
 	visibility: visibilityEnum().default('public'),
+	settings: jsonb(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-			columns: [table.createdBy],
-			foreignColumns: [users.userId],
-			name: "study_group_created_by_fkey"
-		}).onDelete("cascade"),
+		columns: [table.createdBy],
+		foreignColumns: [users.userId],
+		name: "study_group_created_by_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.pathId],
+		foreignColumns: [learningPath.pathId],
+		name: "study_group_path_id_fkey"
+	}).onDelete("cascade"),
 ]);
 
 export const studyGroupMembership = pgTable("study_group_membership", {
@@ -226,7 +221,9 @@ export const studyGroupMembership = pgTable("study_group_membership", {
 	groupId: integer("group_id").notNull(),
 	userId: integer("user_id").notNull(),
 	role: roleEnum().default('member'),
+	status: groupMemberStatusEnum("status").default('pending'),
 	joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow(),
+	lastActiveAt: timestamp("last_active_at", { mode: 'string' }),
 	leftAt: timestamp("left_at", { mode: 'string' }),
 }, (table) => [
 	foreignKey({
@@ -239,6 +236,7 @@ export const studyGroupMembership = pgTable("study_group_membership", {
 			foreignColumns: [users.userId],
 			name: "study_group_membership_user_id_fkey"
 		}).onDelete("cascade"),
+	unique("study_group_membership_group_id_user_id_key").on(table.groupId, table.userId),
 ]);
 
 export const metaInteractionGroup = pgTable("meta_interaction_group", {
@@ -414,4 +412,88 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 			foreignColumns: [users.userId],
 			name: "password_reset_tokens_user_id_fkey"
 		}).onDelete("cascade"),
+]);
+
+export const friendRequest = pgTable("friend_request", {
+	requestId: serial("request_id").primaryKey().notNull(),
+	senderId: integer("sender_id").notNull(),
+	receiverId: integer("receiver_id").notNull(),
+	status: statusEnum().default('pending'),
+	sentAt: timestamp("sent_at", { mode: 'string' }).defaultNow(),
+	acceptedAt: timestamp("accepted_at", { mode: 'string' }),
+	message: text(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+	expiresAt: timestamp("expires_at", { mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.senderId],
+			foreignColumns: [users.userId],
+			name: "friend_request_sender_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.receiverId],
+			foreignColumns: [users.userId],
+			name: "friend_request_receiver_id_fkey"
+		}).onDelete("cascade"),
+]);
+
+export const userFriend = pgTable("user_friend", {
+	friendshipId: serial("friendship_id").primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	friendUserId: integer("friend_user_id").notNull(),
+	connectedAt: timestamp("connected_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.userId],
+			name: "user_friend_user_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.friendUserId],
+			foreignColumns: [users.userId],
+			name: "user_friend_friend_user_id_fkey"
+		}).onDelete("cascade"),
+	unique("user_friend_user_id_friend_user_id_key").on(table.userId, table.friendUserId),
+]);
+
+export const checkpointMigrations = pgTable("checkpoint_migrations", {
+	v: integer().primaryKey().notNull(),
+});
+
+export const checkpointBlobs = pgTable("checkpoint_blobs", {
+	threadId: text("thread_id").notNull(),
+	checkpointNs: text("checkpoint_ns").default('').notNull(),
+	channel: text().notNull(),
+	version: text().notNull(),
+	type: text().notNull(),
+	// TODO: failed to parse database type 'bytea'
+	blob: bytea("blob"),
+}, (table) => [
+	primaryKey({ columns: [table.threadId, table.checkpointNs, table.channel, table.version], name: "checkpoint_blobs_pkey"}),
+]);
+
+export const checkpoints = pgTable("checkpoints", {
+	threadId: text("thread_id").notNull(),
+	checkpointNs: text("checkpoint_ns").default('').notNull(),
+	checkpointId: text("checkpoint_id").notNull(),
+	parentCheckpointId: text("parent_checkpoint_id"),
+	type: text(),
+	checkpoint: jsonb().notNull(),
+	metadata: jsonb().default({}).notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.threadId, table.checkpointNs, table.checkpointId], name: "checkpoints_pkey"}),
+]);
+
+export const checkpointWrites = pgTable("checkpoint_writes", {
+	threadId: text("thread_id").notNull(),
+	checkpointNs: text("checkpoint_ns").default('').notNull(),
+	checkpointId: text("checkpoint_id").notNull(),
+	taskId: text("task_id").notNull(),
+	idx: integer().notNull(),
+	channel: text().notNull(),
+	type: text(),
+	// TODO: failed to parse database type 'bytea'
+	blob: bytea("blob").notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.threadId, table.checkpointNs, table.checkpointId, table.taskId, table.idx], name: "checkpoint_writes_pkey"}),
 ]);

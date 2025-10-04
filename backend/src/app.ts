@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser"
 
 import auth_router from './routes/authRouter'
 import user_router from "./routes/userRoutes";
+import friend_router from "./routes/friendRouter";
+import study_group_router from "./routes/studyGroupRouter";
 import AuthProvider from "./middleware/authProvider";
 import roadmap_router from "./routes/roadmapRouter";
 import { setupSwagger } from "./config/swagger";
@@ -30,6 +32,8 @@ app.get("/api/health-check", (req : Request,res : Response) => {
 
 app.use("/api/auth", auth_router);
 app.use("/api/user",AuthProvider, user_router);
+app.use("/api/friends", AuthProvider, friend_router);
+app.use("/api/study-groups", AuthProvider, study_group_router);
 app.use("/api/roadmap", roadmap_router);
 
 export default app;
