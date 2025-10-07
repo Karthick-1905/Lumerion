@@ -482,7 +482,6 @@ export const checkpointBlobs = pgTable("checkpoint_blobs", {
 	channel: text().notNull(),
 	version: text().notNull(),
 	type: text().notNull(),
-	// TODO: failed to parse database type 'bytea'
 	blob: bytea("blob"),
 }, (table) => [
 	primaryKey({ columns: [table.threadId, table.checkpointNs, table.channel, table.version], name: "checkpoint_blobs_pkey"}),
@@ -508,7 +507,6 @@ export const checkpointWrites = pgTable("checkpoint_writes", {
 	idx: integer().notNull(),
 	channel: text().notNull(),
 	type: text(),
-	// TODO: failed to parse database type 'bytea'
 	blob: bytea("blob").notNull(),
 }, (table) => [
 	primaryKey({ columns: [table.threadId, table.checkpointNs, table.checkpointId, table.taskId, table.idx], name: "checkpoint_writes_pkey"}),

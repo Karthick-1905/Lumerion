@@ -5,8 +5,8 @@ import { HumanMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
-import { roadmapGraph } from "../agents/roadmapGenerator/graph.ts";
-import { RoadmapModule } from "../agents/roadmapGenerator/state.ts";
+import { roadmapGraph } from "../agents/roadmapGenerator/graph";
+import { RoadmapModule } from "../agents/roadmapGenerator/state";
 import { db } from "../drizzle";
 import {
     learningModule,
@@ -45,18 +45,44 @@ export const roadmapGenerator = async (req: Request, res: Response) => {
     const threadId = uuidv4();
 
     try {
-        const result = await roadmapGraph.invoke(
+        await roadmapGraph.invoke(
             { messages: [new HumanMessage(topic)] },
             { configurable: { thread_id: threadId } },
         );
+
+        const snapshot = await roadmapGraph.getState({
+            configurable: { thread_id: threadId },
+        });
+
+        const snapshotValues = snapshot?.values ?? {};
+        const modules = Array.isArray(snapshotValues?.modules)
+            ? (snapshotValues.modules as RoadmapModule[])
+            : [];
+
+        const domain =
+            typeof snapshotValues?.domain === "string" ? snapshotValues.domain : null;
+        const requiresPrereqs =
+            typeof snapshotValues?.requiresPrereqs === "boolean"
+                ? snapshotValues.requiresPrereqs
+                : null;
+        const bootstrapSummary =
+            snapshotValues?.bootstrapSummary && typeof snapshotValues.bootstrapSummary === "object"
+                ? JSON.parse(JSON.stringify(snapshotValues.bootstrapSummary))
+                : null;
+        const prerequisitePlan =
+            snapshotValues?.prerequisitePlan && typeof snapshotValues.prerequisitePlan === "object"
+                ? JSON.parse(JSON.stringify(snapshotValues.prerequisitePlan))
+                : null;
 
         return res.json({
             success: true,
             threadId,
             topic,
-            domain: result?.domain ?? null,
-            requiresPrereqs: result?.requiresPrereqs ?? null,
-            modules: result?.modules ?? [],
+            domain,
+            requiresPrereqs,
+            bootstrapSummary,
+            prerequisitePlan,
+            modules,
         });
     } catch (error) {
         console.error("roadmap route error:", error);
@@ -95,6 +121,10 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     let modules: RoadmapModule[] = [];
     let domain: string | null = null;
     let requiresPrereqs: boolean | null = null;
+    let bootstrapSummary: Record<string, unknown> | null = null;
+    let graphContext: Record<string, unknown> | null = null;
+    let prerequisitePlan: Record<string, unknown> | null = null;
+    let resolvedTopic = topic;
 
     try {
         const snapshot = await roadmapGraph.getState({
@@ -105,11 +135,26 @@ export const saveRoadmap = async (req: Request, res: Response) => {
         if (Array.isArray(snapshotValues?.modules)) {
             modules = snapshotValues.modules as RoadmapModule[];
         }
+        if (typeof snapshotValues?.topic === "string" && snapshotValues.topic.trim().length > 0) {
+            resolvedTopic = snapshotValues.topic.trim();
+        }
         domain =
             typeof snapshotValues?.domain === "string" ? snapshotValues.domain : null;
         requiresPrereqs =
             typeof snapshotValues?.requiresPrereqs === "boolean"
                 ? snapshotValues.requiresPrereqs
+                : null;
+        bootstrapSummary =
+            snapshotValues?.bootstrapSummary && typeof snapshotValues.bootstrapSummary === "object"
+                ? JSON.parse(JSON.stringify(snapshotValues.bootstrapSummary))
+                : null;
+        graphContext =
+            snapshotValues?.graphContext && typeof snapshotValues.graphContext === "object"
+                ? JSON.parse(JSON.stringify(snapshotValues.graphContext))
+                : null;
+        prerequisitePlan =
+            snapshotValues?.prerequisitePlan && typeof snapshotValues.prerequisitePlan === "object"
+                ? JSON.parse(JSON.stringify(snapshotValues.prerequisitePlan))
                 : null;
     } catch (error) {
         console.error("Failed to read roadmap state:", error);
@@ -204,8 +249,12 @@ export const saveRoadmap = async (req: Request, res: Response) => {
 
             const progressPayload = {
                 threadId,
+                topic: resolvedTopic,
                 domain,
                 requiresPrereqs,
+                bootstrapSummary,
+                graphContext,
+                prerequisitePlan,
                 modules: insertedModules.map((moduleMeta) => {
                     const originalModule = modules[moduleMeta.position - 1];
                     return {
@@ -216,6 +265,13 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                             title: lesson.title,
                             description: lesson.description,
                             estimatedTimeHours: lesson.estimatedTimeHours,
+                            recommendedResources: Array.isArray(lesson.recommendedResources)
+                                ? lesson.recommendedResources
+                                : [],
+                            masteryCheck:
+                                typeof lesson.masteryCheck === "string" && lesson.masteryCheck.trim().length > 0
+                                    ? lesson.masteryCheck.trim()
+                                    : null,
                             completed: false,
                         })),
                     };
@@ -237,7 +293,11 @@ export const saveRoadmap = async (req: Request, res: Response) => {
             success: true,
             pathId: result.pathId,
             threadId,
+            topic: resolvedTopic,
             progress: result.progress,
+            bootstrapSummary,
+            graphContext,
+            prerequisitePlan,
             savedModules: result.insertedModules,
         });
     } catch (error) {

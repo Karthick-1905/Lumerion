@@ -3,11 +3,104 @@ import { type BaseMessage } from "@langchain/core/messages";
 
 export type AnyRecord = Record<string, any>;
 
-export interface PlannerAgentOutput {
-	domain: string;
-	requiresPrereqs: boolean;
-	reasoning: string;
-	searchQueries: string[];
+export interface RoadmapLesson {
+	title: string;
+	description: string;
+	estimatedTimeHours: number | null;
+	recommendedResources: string[];
+	masteryCheck?: string | null;
+}
+
+export interface RoadmapModule {
+	title: string;
+	description: string;
+	lessons: RoadmapLesson[];
+}
+
+export interface LearnerProfileMetrics {
+	totalLearningPaths: number;
+	completedModules: number;
+}
+
+export interface LearnerPathSnapshot {
+	pathId: number;
+	title: string | null;
+	query: string | null;
+	moduleCount: number;
+	createdAt: string | null;
+	updatedAt: string | null;
+}
+
+export interface LearnerProfileSnapshot {
+	userId: number;
+	userName: string | null;
+	userEmail: string | null;
+	avatarUrl: string | null;
+	isVerified: boolean;
+	createdAt: string | null;
+	updatedAt: string | null;
+	metrics: LearnerProfileMetrics;
+	recentLearningPaths: LearnerPathSnapshot[];
+}
+
+export interface ContextBootstrapSummary {
+	topicStatement: string;
+	learnerPersona: string;
+	experienceSummary: string;
+	learningObjectives: string[];
+	knowledgeGaps: string[];
+	learningConstraints: string[];
+	learningPreferences: string[];
+	successCriteria: string[];
+	otherNotes?: string;
+}
+
+export interface GraphConceptSummary {
+	conceptId: string;
+	name: string;
+	conceptType?: string | null;
+	description?: string | null;
+	difficulty?: string | null;
+	importance?: number | null;
+	readiness?: number | null;
+	recommendedDurationHours?: number | null;
+	links?: string[];
+}
+
+export interface GraphResourceSummary {
+	resourceId: string;
+	title: string;
+	url: string;
+	resourceType?: string | null;
+	difficulty?: string | null;
+	description?: string | null;
+	recommendedOrder?: number | null;
+}
+
+export interface GraphContextSnapshot {
+	focusConcept: GraphConceptSummary | null;
+	directPrerequisites: GraphConceptSummary[];
+	supportingConcepts: GraphConceptSummary[];
+	relatedResources: GraphResourceSummary[];
+	graphNotes?: string;
+}
+
+export interface PrerequisitePlanStep {
+	conceptId?: string;
+	conceptName: string;
+	sequence: number;
+	categorisation: string;
+	justification: string;
+	recommendedResources: string[];
+	masteryCheck: string;
+}
+
+export interface PrerequisitePlanSummary {
+	steps: PrerequisitePlanStep[];
+	missingFoundations: string[];
+	integrationGuidance: string[];
+	refresherAdvice: string[];
+	summary: string;
 }
 
 export interface SearchResultSnippet {
@@ -23,18 +116,6 @@ export interface SearchQueryResult {
 	results: SearchResultSnippet[];
 	totalResults: number;
 	error?: string;
-}
-
-export interface RoadmapLesson {
-	title: string;
-	description: string;
-	estimatedTimeHours: number | null;
-}
-
-export interface RoadmapModule {
-	title: string;
-	description: string;
-	lessons: RoadmapLesson[];
 }
 
 export interface RoadmapPlannerOutput {
@@ -59,6 +140,18 @@ export const RoadmapStateAnnotation = Annotation.Root({
 		reducer: messagesStateReducer,
 		default: () => [],
 	}),
+	topic: Annotation<string | null>({
+		reducer: (_left, right) => right,
+		default: () => null,
+	}),
+	learnerProfile: Annotation<LearnerProfileSnapshot | null>({
+		reducer: (_left, right) => right,
+		default: () => null,
+	}),
+	bootstrapSummary: Annotation<ContextBootstrapSummary | null>({
+		reducer: (_left, right) => right,
+		default: () => null,
+	}),
 	domain: Annotation<string | null>({
 		reducer: (_left, right) => right,
 		default: () => null,
@@ -67,17 +160,13 @@ export const RoadmapStateAnnotation = Annotation.Root({
 		reducer: (_left, right) => right,
 		default: () => null,
 	}),
-	reasoning: Annotation<string | null>({
+	graphContext: Annotation<GraphContextSnapshot | null>({
 		reducer: (_left, right) => right,
 		default: () => null,
 	}),
-	searchQueries: Annotation<string[]>({
-		default: () => [],
+	prerequisitePlan: Annotation<PrerequisitePlanSummary | null>({
 		reducer: (_left, right) => right,
-	}),
-	searchResults: Annotation<SearchQueryResult[]>({
-		default: () => [],
-		reducer: (_left, right) => right,
+		default: () => null,
 	}),
 	modules: Annotation<RoadmapModule[]>({
 		default: () => [],
@@ -89,23 +178,26 @@ export type RoadmapInputState = typeof RoadmapInputAnnotation.State;
 
 export type RoadmapGraphState = typeof RoadmapStateAnnotation.State;
 
-export type PlanningNodeInput = Pick<RoadmapGraphState, "messages">;
+export type ContextBootstrapNodeInput = Pick<RoadmapGraphState, "messages">;
 
-export type PlanningNodeOutput = Pick<
+export type ContextBootstrapNodeOutput = Pick<
 	RoadmapGraphState,
-	"domain" | "requiresPrereqs" | "reasoning" | "searchQueries"
+	"topic" | "bootstrapSummary" | "learnerProfile" | "domain" | "requiresPrereqs"
 >;
 
-export type SearchNodeInput = Pick<RoadmapGraphState, "messages" | "searchQueries">;
-
-export type SearchNodeOutput = Pick<
+export type PrerequisiteResolverNodeInput = Pick<
 	RoadmapGraphState,
-	"messages" | "searchResults"
+	"topic" | "bootstrapSummary" | "learnerProfile"
 >;
 
-export type RoadmapNodeInput = Pick<
+export type PrerequisiteResolverNodeOutput = Pick<
 	RoadmapGraphState,
-	"domain" | "requiresPrereqs" | "reasoning" | "searchResults"
+	"graphContext" | "prerequisitePlan"
 >;
 
-export type RoadmapNodeOutput = Pick<RoadmapGraphState, "modules">;
+export type CurriculumComposerNodeInput = Pick<
+	RoadmapGraphState,
+	"topic" | "bootstrapSummary" | "graphContext" | "prerequisitePlan"
+>;
+
+export type CurriculumComposerNodeOutput = Pick<RoadmapGraphState, "modules">;

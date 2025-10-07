@@ -4,13 +4,13 @@ import { tool } from "@langchain/core/tools";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { db } from "../../drizzle";
+import { db } from "../../drizzle/index.ts";
 import {
 	learningPath,
 	learningPathModule,
 	userModuleProgress,
 	users,
-} from "../../drizzle/schema";
+} from "../../drizzle/schema.ts";
 
 import type {
 	SearchQueriesToolInput,

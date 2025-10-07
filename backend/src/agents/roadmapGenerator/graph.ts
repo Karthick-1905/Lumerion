@@ -2,18 +2,22 @@ import { END, START, StateGraph } from "@langchain/langgraph";
 import { HumanMessage } from "@langchain/core/messages";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { RoadmapStateAnnotation } from "./state.ts";
-import { planningNode, roadmapNode, searchNode } from "./chain.ts";
+import {
+	contextBootstrapNode,
+	curriculumComposerNode,
+	prerequisiteResolverNode,
+} from "./chain.ts";
 import { v4 as uuidv4 } from "uuid";
 
 
 const graphBuilder = new StateGraph(RoadmapStateAnnotation)
-	.addNode("planning", planningNode)
-	.addNode("search", searchNode)
-	.addNode("roadmap", roadmapNode)
-	.addEdge(START, "planning")
-	.addEdge("planning", "search")
-	.addEdge("search", "roadmap")
-	.addEdge("roadmap", END);
+	.addNode("context_bootstrap", contextBootstrapNode)
+	.addNode("prerequisite_resolver", prerequisiteResolverNode)
+	.addNode("curriculum_composer", curriculumComposerNode)
+	.addEdge(START, "context_bootstrap")
+	.addEdge("context_bootstrap", "prerequisite_resolver")
+	.addEdge("prerequisite_resolver", "curriculum_composer")
+	.addEdge("curriculum_composer", END);
 
 const checkpoint = PostgresSaver.fromConnString(process.env.DATABASE_URL ?? "");
 await checkpoint.setup()
@@ -29,7 +33,7 @@ const config = {
   }
 };
 
-export const runRoadmapSampleQuery = async (
+const runRoadmapSampleQuery = async (
 	topic = "I want to learn Deep Learning from scratch.",
 ): Promise<unknown> => {
 	console.log(`Running sample roadmap query: "${topic}"`);

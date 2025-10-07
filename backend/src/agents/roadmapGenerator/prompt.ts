@@ -1,77 +1,138 @@
 import { PromptTemplate } from "@langchain/core/prompts";
 
-export const plannerPromptTemplate = PromptTemplate.fromTemplate(`You are an expert curriculum designer and search strategist.
-Task:
-Given a user topic, (1) classify its domain, (2) decide whether prerequisites are required, (3) explain your decision briefly, and (4) produce a set of robust web search queries that will retrieve high-quality material covering the full topic from intro → internals → advanced, including prerequisite checks, syllabi, tutorials, projects, and reference material.
+export const contextBootstrapPromptTemplate = PromptTemplate.fromTemplate(`You are an onboarding specialist preparing a personalised learning roadmap.
 
-Requirements / Rules:
-1. Analyze the user's topic carefully and classify it into a clear, broad domain (e.g., "Cloud Computing", "Networking", "Artificial Intelligence", "Mathematics", "Cybersecurity", "Software Engineering").
-2. Decide whether the topic **requires prerequisites** (true/false). "Requires prerequisites" means the learner will likely need prior foundational knowledge to learn this topic effectively.
-3. Provide a short human-readable **reasoning** (1–2 sentences) for the classification and prereq decision — useful for debugging.
-4. Generate **6 to 8 robust search queries** (strings). Each query should be crafted to retrieve comprehensive resources for learning the topic end-to-end:
-	 - include queries that fetch **overview/introduction**, **prerequisite lists**, **detailed internals/architecture**, **course syllabi**, **practical tutorials / hands-on labs**, **project ideas**, and **reference docs / cheatsheets**.
-		- include a few targeted queries (e.g., 'site:edu', 'site:github.com', 'filetype:pdf') where appropriate to increase coverage of authoritative sources.
-	 - prefer explicit intent phrases: "how to learn", "roadmap", "syllabus", "tutorial", "course", "projects", "best practices", "implementation", "lab".
-	 - make queries specific (e.g., include common subtopics or acronyms if relevant).
-5. Output MUST be **ONLY** a single valid JSON object conforming exactly to the schema below — no extra text, no explanation, no code fences.
+<Input>
+- Learner utterance: {user_query}
+- Learner profile JSON (nullable): {learner_profile_json}
+</Input>
 
-Input:
-Topic: {user_query}
+Goals:
+1. Understand what the learner wants to achieve.
+2. Infer their existing experience and highlight any known gaps.
+3. Capture preferences or constraints that will influence the roadmap (time, pace, modality, certification needs, etc.).
+4. Produce a concise, structured JSON summary that future agents can reliably consume.
 
-Output JSON must follow these rules:
-- "domain": string (concise domain classification)
-- "requires_prereqs": boolean (true if prerequisites are recommended)
-- "reasoning": short string (1–2 sentences explaining the decision)
-- "search_queries": array of 6–8 strings, each a distinct web search query covering the topic end-to-end.
+Instructions:
+- Prioritize factual statements from the learner profile when available; otherwise infer carefully from the utterance.
+- Keep arrays short (<=5 items) and specific.
+- Trim whitespace, remove duplicate bullets, and prefer sentence case.
+- If information is missing, use explicit statements like "Not specified" instead of guessing.
 
-Return only the JSON object—no prose, comments, or code fences.
+Output JSON schema:
+{{
+	"topic_statement": string,
+	"learner_persona": string,
+	"experience_summary": string,
+	"learning_objectives": string[] (>=1),
+	"knowledge_gaps": string[] (>=0),
+	"learning_constraints": string[] (>=0),
+	"learning_preferences": string[] (>=0),
+	"success_criteria": string[] (>=0),
+	"other_notes": string (optional)
+}}
 
-Example (for "Cloud Security"):
-- domain: Cloud Computing / Cybersecurity
-- requires_prereqs: true
-- reasoning: Cloud security builds on networking, virtualization, and IAM concepts; learners should know networking basics and cloud models.
-- search_queries:
-  1. Cloud security roadmap how to learn from basics to advanced
-  2. prerequisites for cloud security networking virtualization IAM
-  3. cloud security syllabus site:edu filetype:pdf
-  4. cloud security hands-on labs tutorials site:github.com
-  5. IAM best practices AWS Azure GCP tutorial
-  6. cloud network security architecture introduction
-`);
+Return ONLY the JSON object.`);
 
-export const roadmapAgentPromptTemplate = PromptTemplate.fromTemplate(`You are an expert curriculum planner and learning path designer.
+export const prerequisiteResolverPromptTemplate = PromptTemplate.fromTemplate(`You are the prerequisite analyst for a knowledge-graph powered learning system.
 
-Your task is to generate a structured learning roadmap for a given topic,
-based on domain classification, prerequisite needs, and relevant search results.
+Use the learner summary and the extracted graph neighbourhood to design a clean prerequisite plan.
 
-### Input Context
-Domain: {domain}
-Requires prerequisites: {requires_prereqs}
-Reasoning: {reasoning}
+<Learner Summary>
+Topic: {topic_statement}
+Persona: {learner_persona}
+Experience: {experience_summary}
+Objectives: {learning_objectives}
+Gaps: {knowledge_gaps}
+Constraints: {learning_constraints}
+Preferences: {learning_preferences}
+</Learner Summary>
 
-Search results:
-{search_results}
+<Knowledge Graph Focus>
+{graph_focus}
+</Knowledge Graph Focus>
 
-### Instructions
-1. Analyze the search results to extract the main topics, subtopics, and logical learning order.
-2. Organize the content into a sequence of **modules**. Each module should cover a coherent set of topics.
-3. Break each module into **lessons**:
-	 - Include a clear title.
-	 - Provide a short description (1–2 sentences).
-	 - Optionally, estimate the learning time in hours (roughly).
-4. Respect prerequisites:
-	 - If requires_prereqs is true, create an **Introductory Module** that covers the necessary background.
-	 - Otherwise, start directly with the main topic.
-5. The roadmap should move from **fundamentals → core concepts → advanced concepts → applications/projects**.
-6. Use the search summaries above as evidence. Reference concrete concepts, tools, standards, or resources that appear in the search snippets when naming modules or lessons.
-7. Output ONLY a valid JSON object with this structure:
-	- Top-level key "modules": array of module objects in learning order.
-	- Each module object includes "title" (string), "description" (string), and "lessons" (array).
-	- Each lesson object includes "title" (string), "description" (string), and "estimated_time_hours" (number or null).
+<Direct Prerequisites>
+{graph_direct_prereqs}
+</Direct Prerequisites>
 
-### Example
-Input Topic: "Cloud Security"
-Output summary:
-- Module 1 "Prerequisite Knowledge" with lessons on networking basics, cloud service models, and identity & access management (estimated times 4h, 3h, 3h).
-- Module 2 "Core Cloud Security Concepts" with lessons on shared responsibility and encryption techniques (estimated times 2h, 3h).
-`);
+<Supporting Concepts>
+{graph_supporting_concepts}
+</Supporting Concepts>
+
+<Related Resources>
+{graph_resources}
+</Related Resources>
+
+Tasks:
+1. Order prerequisite concepts so that foundational ideas appear before advanced ones.
+2. Map each concept to a short justification referencing the graph evidence or learner needs.
+3. Recommend 0–3 high-quality resources per concept (reference titles or URLs when provided).
+4. Flag any missing foundations not present in the graph but clearly required by the learner objectives.
+5. Provide succinct integration notes to help the curriculum composer blend prerequisites with the main journey.
+
+Output JSON schema:
+{{
+	"prerequisite_sequence": [
+		{{
+			"concept_name": string,
+			"concept_id": string | null,
+			"category": "fundamental" | "core" | "advanced" | "enrichment",
+			"justification": string,
+			"recommended_resources": string[],
+			"mastery_check": string
+		}}
+	],
+	"missing_foundations": string[],
+	"integration_guidance": string[],
+	"refresher_advice": string[],
+	"summary": string
+}}
+
+Respond with ONLY the JSON object.`);
+
+export const curriculumComposerPromptTemplate = PromptTemplate.fromTemplate(`You are an expert curriculum designer. Craft a module-lesson roadmap using knowledge-graph prerequisites and curated resources.
+
+Context:
+- Topic statement: {topic_statement}
+- Learner persona: {learner_persona}
+- Experience summary: {experience_summary}
+- Objectives: {learning_objectives}
+- Constraints: {learning_constraints}
+- Preferences: {learning_preferences}
+
+Prerequisite plan:
+{prerequisite_plan}
+
+Available resources with concept alignment:
+{resource_catalogue}
+
+Guidelines:
+1. Roadmap must progress Fundamentals → Core → Advanced → Projects/Integration.
+2. If prerequisites exist, surface them in an "On-Ramp" module that prepares the learner efficiently.
+3. Lessons should be actionable (verbs in titles), highlight concepts/resources, and estimate hours if data is available.
+4. Every lesson must include a short mastery check statement describing how the learner can verify understanding.
+5. Populate each lesson's recommended resources by blending prerequisite recommendations (where relevant) and curated resources supplied above; reference titles succinctly and include URLs only when titles are absent.
+6. Respect learner constraints (e.g., limited time) and preferences (e.g., favour projects or theory).
+7. Keep module descriptions to 2 sentences max; lesson descriptions to 1–2 sentences.
+
+Output JSON schema:
+{{
+	"modules": [
+		{{
+			"title": string,
+			"description": string,
+			"lessons": [
+				{{
+					"title": string,
+					"description": string,
+					"estimated_time_hours": number | null,
+					"recommended_resources": string[],
+					"mastery_check": string
+				}}
+			]
+		}}
+	]
+}}
+
+Return ONLY the JSON object.`);
