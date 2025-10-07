@@ -105,6 +105,7 @@ export const learningPath = pgTable("learning_path", {
 	isCustomized: boolean("is_customized").default(false),
 	difficultyLevel: difficultyLevel("difficulty_level"),
 	tags: text().array(),
+	visibility: visibilityEnum("visibility").default('private').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
@@ -454,6 +455,21 @@ export const userFriend = pgTable("user_friend", {
 			name: "user_friend_friend_user_id_fkey"
 		}).onDelete("cascade"),
 	unique("user_friend_user_id_friend_user_id_key").on(table.userId, table.friendUserId),
+]);
+
+export const roadmapSession = pgTable("roadmap_session", {
+	sessionId: serial("session_id").primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	threadId: text("thread_id").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	lastActivityAt: timestamp("last_activity_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.userId],
+		foreignColumns: [users.userId],
+		name: "roadmap_session_user_id_fkey"
+	}).onDelete("cascade"),
+	unique("roadmap_session_thread_id_unique").on(table.threadId),
 ]);
 
 export const checkpointMigrations = pgTable("checkpoint_migrations", {

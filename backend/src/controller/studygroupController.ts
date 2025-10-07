@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { SQL, and, desc, eq, inArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "../drizzle";
 import {
@@ -10,7 +11,7 @@ import {
 	users,
 } from "../drizzle/schema";
 import type {AddMemberBody,CreateStudyGroupBody,ListStudyGroupsQuery,RespondToInvitationBody,StudyGroupDetail,StudyGroupDetailMember,StudyGroupMemberStatus,
-	StudyGroupRole,StudyGroupSummary,StudyGroupVisibility,UpdateMemberBody,} from "../schema/studyGroupSchema";
+	StudyGroupRole,StudyGroupSummary,StudyGroupVisibility,UpdateMemberBody,UserStudyGroupSummary,} from "../schema/studyGroupSchema";
 import {
 	groupMemberStatusEnum as groupMemberStatusSchema,
 	groupRoleEnum as groupRoleSchema,
@@ -19,10 +20,12 @@ import {
 	sendStudyGroupAdminNotification,
 	sendStudyGroupInviteEmail,
 } from "../mailer/studygroupMailer";
+import { userStudyGroupListQuerySchema } from "../schema/studyGroupSchema";
 
 type MembershipRow = typeof studyGroupMembership.$inferSelect;
 
 const ACTIVE_STATUSES: StudyGroupMemberStatus[] = ["active"];
+const SUMMARY_STATUSES: StudyGroupMemberStatus[] = ["pending", "active"];
 
 function normalizeDescription(value: unknown): string | null {
 	if (typeof value !== "string") {
@@ -371,6 +374,98 @@ export const listStudyGroups = async (req: Request, res: Response) => {
 	return res.status(StatusCodes.OK).json({
 		success: true,
 		data: formatted,
+		pagination: {
+			total: total ?? 0,
+			limit,
+			offset,
+		},
+	});
+};
+
+export const listUserStudyGroups = async (req: Request, res: Response) => {
+	const userId = ensureAuthenticated(req, res);
+	if (!userId) {
+		return;
+	}
+
+	const parseResult = userStudyGroupListQuerySchema.safeParse(req.query);
+	if (!parseResult.success) {
+		return res.status(StatusCodes.BAD_REQUEST).json({
+			success: false,
+			errors: parseResult.error.flatten().fieldErrors,
+		});
+	}
+
+	const { limit = 20, offset = 0 } = parseResult.data;
+
+	const membershipAlias = alias(studyGroupMembership, "sgm_all");
+
+	const rows = await db
+		.select({
+			groupId: studyGroup.groupId,
+			groupName: studyGroup.groupName,
+			pathId: studyGroup.pathId,
+			pathTitle: learningPath.userGoal,
+			pathTopic: learningPath.userQuery,
+			visibility: studyGroup.visibility,
+			role: studyGroupMembership.role,
+			status: studyGroupMembership.status,
+			joinedAt: studyGroupMembership.joinedAt,
+			createdAt: studyGroup.createdAt,
+			memberCount: sql<number>`count(distinct ${membershipAlias.membershipId})::int`,
+		})
+		.from(studyGroupMembership)
+		.innerJoin(studyGroup, eq(studyGroupMembership.groupId, studyGroup.groupId))
+		.innerJoin(learningPath, eq(learningPath.pathId, studyGroup.pathId))
+		.leftJoin(membershipAlias, eq(membershipAlias.groupId, studyGroup.groupId))
+		.where(
+			and(
+				eq(studyGroupMembership.userId, userId),
+				inArray(studyGroupMembership.status, SUMMARY_STATUSES),
+			),
+		)
+		.groupBy(
+			studyGroup.groupId,
+			studyGroup.groupName,
+			studyGroup.pathId,
+			studyGroup.visibility,
+			studyGroup.createdAt,
+			learningPath.userGoal,
+			learningPath.userQuery,
+			studyGroupMembership.role,
+			studyGroupMembership.status,
+			studyGroupMembership.joinedAt,
+		)
+		.orderBy(desc(studyGroupMembership.joinedAt))
+		.limit(limit)
+		.offset(offset);
+
+	const [{ total }] = await db
+		.select({ total: sql<number>`count(*)::int` })
+		.from(studyGroupMembership)
+		.where(
+			and(
+				eq(studyGroupMembership.userId, userId),
+				inArray(studyGroupMembership.status, SUMMARY_STATUSES),
+			),
+		);
+
+	const summaries: UserStudyGroupSummary[] = rows.map((row) => ({
+		groupId: row.groupId,
+		groupName: row.groupName,
+		pathId: row.pathId,
+		pathTitle: row.pathTitle ?? row.pathTopic ?? null,
+		visibility: (row.visibility ?? "public") as StudyGroupVisibility,
+		role: (row.role ?? "member") as StudyGroupRole,
+		status: (row.status ?? "pending") as StudyGroupMemberStatus,
+		joinedAt: row.joinedAt ?? null,
+		memberCount: row.memberCount ?? 0,
+		createdAt: row.createdAt ?? null,
+	}));
+
+	return res.status(StatusCodes.OK).json({
+		success: true,
+		data: summaries,
 		pagination: {
 			total: total ?? 0,
 			limit,

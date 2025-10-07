@@ -8,6 +8,20 @@
       "when": 1757357613018,
       "tag": "20250908185333_lyrical_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762294800000,
+      "tag": "20251005180000_add_roadmap_session",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765113600000,
+      "tag": "20251007090000_add_learning_path_visibility",
+      "breakpoints": false
     }
   ]
 }

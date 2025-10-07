@@ -1,7 +1,16 @@
 import { TavilySearch } from "@langchain/tavily";
 import type { TavilySearchResponse } from "@langchain/tavily";
 import { tool } from "@langchain/core/tools";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+
+import { db } from "../../drizzle";
+import {
+	learningPath,
+	learningPathModule,
+	userModuleProgress,
+	users,
+} from "../../drizzle/schema";
 
 import type {
 	SearchQueriesToolInput,
@@ -37,6 +46,12 @@ const searchQueriesToolSchema = z.object({
 	searchQueries: z
 		.array(z.string().min(1, "Search query cannot be empty"))
 		.min(1, "Provide at least one search query"),
+});
+
+const userProfileToolSchema = z.object({
+	userId: z.number().int().positive(),
+	includePaths: z.boolean().optional().default(true),
+	limit: z.number().int().positive().max(25).optional().default(5),
 });
 
 export const searchQueriesTool = tool(
@@ -108,3 +123,100 @@ export const searchQueriesTool = tool(
 );
 
 export type SearchQueriesTool = typeof searchQueriesTool;
+
+export const userProfileTool = tool(
+	async (rawInput: unknown) => {
+		const { userId, includePaths, limit } = userProfileToolSchema.parse(rawInput);
+
+		const profile = await db.query.users.findFirst({
+			columns: {
+				userId: true,
+				userName: true,
+				userEmail: true,
+				avatarPublicUrl: true,
+				isVerified: true,
+				createdAt: true,
+				updatedAt: true,
+			},
+			where: eq(users.userId, userId),
+		});
+
+		if (!profile) {
+			return {
+				success: false,
+				reason: "User not found",
+			};
+		}
+
+		const [{ totalLearningPaths }] = await db
+			.select({ totalLearningPaths: sql<number>`count(*)::int` })
+			.from(learningPath)
+			.where(eq(learningPath.userId, userId));
+
+		const [{ completedModules }] = await db
+			.select({ completedModules: sql<number>`count(*)::int` })
+			.from(userModuleProgress)
+			.where(
+				and(
+					eq(userModuleProgress.userId, userId),
+					eq(userModuleProgress.status, "completed"),
+				),
+			);
+
+		let recentLearningPaths: Array<{
+			pathId: number;
+			title: string | null;
+			query: string | null;
+			moduleCount: number;
+			createdAt: string | null;
+			updatedAt: string | null;
+		}> = [];
+
+		if (includePaths) {
+			recentLearningPaths = await db
+				.select({
+					pathId: learningPath.pathId,
+					title: learningPath.userGoal,
+					query: learningPath.userQuery,
+					moduleCount: sql<number>`count(${learningPathModule.moduleId})::int`,
+					createdAt: learningPath.createdAt,
+					updatedAt: learningPath.updatedAt,
+				})
+				.from(learningPath)
+				.leftJoin(
+					learningPathModule,
+					eq(learningPathModule.pathId, learningPath.pathId),
+				)
+				.where(eq(learningPath.userId, userId))
+				.groupBy(learningPath.pathId)
+				.orderBy(desc(learningPath.updatedAt))
+				.limit(limit);
+		}
+
+		return {
+			success: true,
+			profile: {
+				userId: profile.userId,
+				userName: profile.userName,
+				userEmail: profile.userEmail,
+				avatarUrl: profile.avatarPublicUrl ?? null,
+				isVerified: profile.isVerified ?? false,
+				createdAt: profile.createdAt ?? null,
+				updatedAt: profile.updatedAt ?? null,
+			},
+			metrics: {
+				totalLearningPaths: totalLearningPaths ?? 0,
+				completedModules: completedModules ?? 0,
+			},
+			recentLearningPaths,
+		};
+	},
+	{
+		name: "user_profile_tool",
+		description:
+			"Fetch a learner's profile, learning-path metrics, and recent paths for personalisation.",
+		schema: userProfileToolSchema,
+	},
+);
+
+export type UserProfileTool = typeof userProfileTool;

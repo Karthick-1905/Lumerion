@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, not, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "../drizzle";
@@ -15,6 +15,8 @@ import type {
     ModuleProgressPayload,
 } from "../schema/roadmapSchema";
 import { updateLearningPathSchema } from "../schema/roadmapSchema";
+import type { UserSearchQuery } from "../schema/friendSchema";
+import { userSearchQuerySchema } from "../schema/friendSchema";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -135,6 +137,60 @@ export const getUserProfile = async (req: Request, res: Response) => {
     }
 };
 
+export const searchUsersByName = async (req: Request, res: Response) => {
+    const actorId = req.user_id;
+    if (!actorId) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Authentication required." });
+    }
+
+    const queryParse = userSearchQuerySchema.safeParse(req.query);
+    if (!queryParse.success) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            errors: queryParse.error.flatten().fieldErrors,
+        });
+    }
+
+    const { term, limit = 20, offset = 0 } = queryParse.data as UserSearchQuery;
+    const sanitizedTerm = `%${term.replace(/[%_]/g, "\\$&")}%`;
+
+    const [{ total }] = await db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(users)
+        .where(
+            and(
+                ilike(users.userName, sanitizedTerm),
+                not(eq(users.userId, actorId)),
+            ),
+        );
+
+    const rows = await db
+        .select({
+            userId: users.userId,
+            userName: users.userName,
+        })
+        .from(users)
+        .where(
+            and(
+                ilike(users.userName, sanitizedTerm),
+                not(eq(users.userId, actorId)),
+            ),
+        )
+        .orderBy(users.userName)
+        .limit(limit)
+        .offset(offset);
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        results: rows.map((row) => ({ userId: row.userId, userName: row.userName ?? null })),
+        pagination: {
+            total: total ?? 0,
+            limit,
+            offset,
+        },
+    });
+};
+
 
 type FetchLearningPathsOptions = {
     pathIds?: number[];
@@ -158,6 +214,7 @@ async function fetchLearningPathsPayload(
             tags: learningPath.tags,
             createdAt: learningPath.createdAt,
             updatedAt: learningPath.updatedAt,
+            visibility: learningPath.visibility,
             progress: learningPath.progress,
         })
         .from(learningPath)
@@ -278,6 +335,7 @@ async function fetchLearningPathsPayload(
                 progress: path.progress ?? null,
                 moduleCount: modules.length,
                 modules: includeDetails ? modules : [],
+                visibility: (path.visibility ?? "private") as "public" | "private" | "restricted",
             };
         })
         .sort((a, b) => {
@@ -311,6 +369,7 @@ export const getLearningPaths = async (req: Request, res: Response) => {
             lastUpdatedAt: path.progress && isRecord(path.progress) && typeof path.progress.updatedAt === "string"
                 ? (path.progress.updatedAt as string)
                 : path.updatedAt,
+            visibility: path.visibility,
         }));
         return res.status(StatusCodes.OK).json({
             success: true,

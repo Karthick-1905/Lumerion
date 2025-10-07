@@ -12,9 +12,16 @@ import {
     learningModule,
     learningPath,
     learningPathModule,
+    studyGroup,
+    users,
 } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { getSession } from "../utils/authUtils";
+import {
+    PublicRoadmapListQuery,
+    publicRoadmapListQuerySchema,
+    setLearningPathVisibilitySchema,
+} from "../schema/roadmapSchema";
 
 const COOKIE_SESSION_KEY = process.env.COOKIE_SESSION_KEY ?? "session-id";
 
@@ -240,4 +247,173 @@ export const saveRoadmap = async (req: Request, res: Response) => {
             error: "Failed to persist roadmap. Please try again.",
         });
     }
+};
+
+export const setLearningPathVisibility = async (req: Request, res: Response) => {
+    const userId = req.user_id;
+    if (!userId) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            message: "Authentication required.",
+        });
+    }
+
+    const parseResult = setLearningPathVisibilitySchema.safeParse({
+        params: req.params,
+        body: req.body,
+    });
+
+    if (!parseResult.success) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            errors: parseResult.error.flatten().fieldErrors,
+        });
+    }
+
+    const {
+        params: { pathId },
+        body: { visibility },
+    } = parseResult.data;
+
+    const existingPath = await db.query.learningPath.findFirst({
+        columns: {
+            pathId: true,
+            userId: true,
+            visibility: true,
+        },
+        where: eq(learningPath.pathId, pathId),
+    });
+
+    if (!existingPath) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            message: "Learning path not found.",
+        });
+    }
+
+    if (existingPath.userId !== userId) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+            success: false,
+            message: "You do not have permission to update this learning path.",
+        });
+    }
+
+    const nowIso = new Date().toISOString();
+
+    await db
+        .update(learningPath)
+        .set({
+            visibility,
+            updatedAt: nowIso,
+        })
+        .where(eq(learningPath.pathId, pathId));
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        pathId,
+        visibility,
+        updatedAt: nowIso,
+    });
+};
+
+export const listPublicRoadmaps = async (req: Request, res: Response) => {
+    const parseResult = publicRoadmapListQuerySchema.safeParse(req.query);
+    if (!parseResult.success) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            errors: parseResult.error.flatten().fieldErrors,
+        });
+    }
+
+    const { limit = 20, offset = 0, search, difficulty } =
+        parseResult.data as PublicRoadmapListQuery;
+
+    const whereConditions = [eq(learningPath.visibility, "public")];
+
+    if (difficulty) {
+        whereConditions.push(eq(learningPath.difficultyLevel, difficulty));
+    }
+
+    if (search && search.trim().length > 0) {
+        const sanitized = `%${search.replace(/[%_]/g, "\\$&")}%`;
+        const searchClause = or(
+            ilike(learningPath.userGoal, sanitized),
+            ilike(learningPath.userQuery, sanitized),
+            ilike(users.userName, sanitized),
+        )!;
+        whereConditions.push(searchClause);
+    }
+
+    const whereClause = and(...whereConditions);
+
+    const rows = await db
+        .select({
+            pathId: learningPath.pathId,
+            title: learningPath.userGoal,
+            topic: learningPath.userQuery,
+            difficultyLevel: learningPath.difficultyLevel,
+            tags: learningPath.tags,
+            createdAt: learningPath.createdAt,
+            updatedAt: learningPath.updatedAt,
+            ownerId: users.userId,
+            ownerName: users.userName,
+            moduleCount: sql<number>`count(distinct ${learningPathModule.moduleId})::int`,
+            studyGroupCount: sql<number>`count(distinct ${studyGroup.groupId})::int`,
+        })
+        .from(learningPath)
+        .innerJoin(users, eq(users.userId, learningPath.userId))
+        .leftJoin(
+            learningPathModule,
+            eq(learningPathModule.pathId, learningPath.pathId),
+        )
+        .leftJoin(studyGroup, eq(studyGroup.pathId, learningPath.pathId))
+        .where(whereClause)
+        .groupBy(
+            learningPath.pathId,
+            learningPath.userGoal,
+            learningPath.userQuery,
+            learningPath.difficultyLevel,
+            learningPath.tags,
+            learningPath.createdAt,
+            learningPath.updatedAt,
+            users.userId,
+            users.userName,
+        )
+        .orderBy(desc(learningPath.updatedAt ?? learningPath.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+    const [{ total }] = await db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(learningPath)
+        .where(whereClause);
+
+    const data = rows.map((row) => ({
+        pathId: row.pathId,
+        title: row.title ?? null,
+        topic: row.topic ?? null,
+        visibility: "public" as const,
+        difficulty: row.difficultyLevel ?? null,
+        tags: Array.isArray(row.tags)
+            ? row.tags.filter((tag): tag is string => typeof tag === "string")
+            : [],
+        moduleCount: row.moduleCount ?? 0,
+        studyGroupCount: row.studyGroupCount ?? 0,
+        createdAt: row.createdAt ?? null,
+        updatedAt: row.updatedAt ?? null,
+        owner: {
+            userId: row.ownerId,
+            userName: row.ownerName ?? null,
+        },
+    }));
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        data,
+        pagination: {
+            total: total ?? 0,
+            limit,
+            offset,
+        },
+    });
 };

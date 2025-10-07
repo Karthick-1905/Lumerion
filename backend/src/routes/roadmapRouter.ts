@@ -1,9 +1,19 @@
-import {Router, Request, Response} from  'express'
-import { roadmapGenerator, saveRoadmap } from '../controller/roadmapController'
-import AuthProvider from '../middleware/authProvider'
-const roadmap_router = Router()
+import { Router } from "express";
+import {
+	listPublicRoadmaps,
+	roadmapGenerator,
+	saveRoadmap,
+	setLearningPathVisibility,
+} from "../controller/roadmapController";
+import AuthProvider from "../middleware/authProvider";
+import { validate } from "../middleware/validateResource";
+import { setLearningPathVisibilitySchema } from "../schema/roadmapSchema";
+const roadmapRouter = Router();
 
-roadmap_router.route('/generate').post(AuthProvider, roadmapGenerator)
-roadmap_router.route('/save').post(AuthProvider, saveRoadmap)
+roadmapRouter.post("/generate", AuthProvider, roadmapGenerator);
+roadmapRouter.post("/save", AuthProvider, saveRoadmap);
+roadmapRouter.patch("/learning-paths/:pathId/visibility", AuthProvider, 
+    validate(setLearningPathVisibilitySchema), setLearningPathVisibility);
+roadmapRouter.get("/public", listPublicRoadmaps);
 
-export default roadmap_router
+export default roadmapRouter;

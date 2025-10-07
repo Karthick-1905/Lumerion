@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
 	createStudyGroup,
 	listStudyGroups,
+	listUserStudyGroups,
 	getStudyGroup,
 	addStudyGroupMember,
 	respondToStudyGroupInvitation,
@@ -13,6 +14,7 @@ import {
 import {
 	createStudyGroupSchema,
 	listStudyGroupsSchema,
+	userStudyGroupListQuerySchema,
 	getStudyGroupSchema,
 	addMemberSchema,
 	respondToInvitationSchema,
@@ -27,6 +29,8 @@ const studyGroupRouter = Router();
 studyGroupRouter.post("/learning-paths/:pathId",validate(createStudyGroupSchema),createStudyGroup);
 
 studyGroupRouter.get("/learning-paths/:pathId",validate(listStudyGroupsSchema),listStudyGroups);
+
+studyGroupRouter.get("/me", validate(userStudyGroupListQuerySchema), listUserStudyGroups);
 
 studyGroupRouter.get("/:groupId",validate(getStudyGroupSchema),getStudyGroup);
 

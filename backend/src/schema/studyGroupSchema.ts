@@ -4,7 +4,7 @@ export const groupVisibilityEnum = z.enum(["public", "private", "restricted"]);
 export const groupRoleEnum = z.enum(["owner", "admin", "moderator", "member"]);
 export const groupMemberStatusEnum = z.enum(["pending", "active", "removed"]);
 
-const paginationQuerySchema = z.object({
+export const paginationQuerySchema = z.object({
 	limit: z.coerce.number().int().positive().max(100).optional(),
 	offset: z.coerce.number().int().nonnegative().optional(),
 });
@@ -139,6 +139,21 @@ export type StudyGroupDetail = {
 		avatarUrl: string | null;
 	};
 	members: StudyGroupDetailMember[];
+};
+
+export const userStudyGroupListQuerySchema = paginationQuerySchema;
+
+export type UserStudyGroupSummary = {
+	groupId: number;
+	groupName: string;
+	pathId: number;
+	pathTitle: string | null;
+	visibility: StudyGroupVisibility;
+	role: StudyGroupRole;
+	status: StudyGroupMemberStatus;
+	joinedAt: string | null;
+	memberCount: number;
+	createdAt: string | null;
 };
 
 export type PaginationMeta = {

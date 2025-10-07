@@ -12,6 +12,7 @@ export type LearningPathListItem = {
     createdAt: string | null;
     updatedAt: string | null;
     lastUpdatedAt: string | null;
+    visibility: "public" | "private" | "restricted";
 };
 
 export type ModuleProgressPayload = {
@@ -47,6 +48,51 @@ export type LearningPathPayload = {
     progress: unknown;
     moduleCount: number;
     modules: ModulePayload[];
+    visibility: "public" | "private" | "restricted";
+};
+
+export const pathIdParamsSchema = z.object({
+    pathId: z.coerce.number().int().positive(),
+});
+
+export const learningPathVisibilityEnum = z.enum(["public", "private"]);
+
+const paginationQuerySchema = z.object({
+    limit: z.coerce.number().int().positive().max(100).optional(),
+    offset: z.coerce.number().int().nonnegative().optional(),
+});
+
+export const setLearningPathVisibilitySchema = z.object({
+    params: pathIdParamsSchema,
+    body: z.object({
+        visibility: learningPathVisibilityEnum,
+    }),
+});
+
+export const publicRoadmapListQuerySchema = paginationQuerySchema.merge(
+    z.object({
+        search: z.string().min(1).optional(),
+        difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+    }),
+);
+
+export type PublicRoadmapListQuery = z.infer<typeof publicRoadmapListQuerySchema>;
+
+export type PublicRoadmapSummary = {
+    pathId: number;
+    title: string | null;
+    topic: string | null;
+    visibility: "public";
+    difficulty: string | null;
+    tags: string[];
+    moduleCount: number;
+    studyGroupCount: number;
+    createdAt: string | null;
+    updatedAt: string | null;
+    owner: {
+        userId: number;
+        userName: string | null;
+    };
 };
 
 export const updateLessonSchema = z.object({

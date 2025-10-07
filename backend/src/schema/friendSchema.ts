@@ -61,9 +61,20 @@ export const listFriendsSchema = z.object({
 	query: friendListQuerySchema,
 });
 
+export const userSearchQuerySchema = paginationQuerySchema.merge(
+	z.object({
+		term: z
+			.string()
+			.trim()
+			.min(1, "Search term must be at least 1 character")
+			.max(100, "Search term must be at most 100 characters"),
+	})
+);
+
 export type SendFriendRequestBody = z.infer<typeof sendFriendRequestBodySchema>;
 export type FriendRequestsQuery = z.infer<typeof friendRequestsQuerySchema>;
 export type FriendListQuery = z.infer<typeof friendListQuerySchema>;
+export type UserSearchQuery = z.infer<typeof userSearchQuerySchema>;
 export type FriendRequestDirection = z.infer<typeof friendRequestDirectionEnum>;
 export type FriendRequestStatus = z.infer<typeof friendRequestStatusEnum>;
 export type RequestIdParams = z.infer<typeof requestIdParamsSchema>;
