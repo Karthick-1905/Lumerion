@@ -56,12 +56,8 @@ export const useLoginMutation = () => {
   return useMutation<LoginResponse, ApiError, LoginRequest>({
     mutationKey: AUTH_QUERY_KEYS.login,
     mutationFn: authApi.login,
-    onSuccess: (data) => {
-      // Store user data and token
-      localStorage.setItem('authToken', data.data.token);
-      localStorage.setItem('userData', JSON.stringify(data.data.user));
-      
-      // Navigate to dashboard or appropriate page
+    onSuccess: () => {
+      // Session cookie is set by server; just navigate to the next screen
       navigate('/dashboard');
     },
     onError: (error) => {
@@ -82,7 +78,7 @@ export const useVerifyEmailMutation = () => {
       localStorage.removeItem('pendingVerificationEmail');
       
       // Navigate to profile setup or login
-      navigate('/profile-setup');
+      navigate('/dashboard');
     },
     onError: (error) => {
       console.error('Email verification failed:', error);

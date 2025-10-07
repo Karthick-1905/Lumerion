@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import ForgotPasswordModal from './ForgotPasswordModal';
+import { useLoginMutation } from '../../hooks/useAuth';
+import { toast } from 'react-toastify';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -8,6 +10,7 @@ export default function Login() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const { mutate: login, isPending } = useLoginMutation();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -17,6 +20,26 @@ export default function Login() {
     }));
   };
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      toast.error('Please enter email and password');
+      return;
+    }
+    login(
+      {
+        user_email: formData.email,
+        password: formData.password,
+      },
+      {
+        onError: (err: any) => {
+          const message = err?.response?.message || err?.message || 'Login failed';
+          toast.error(message);
+        },
+      }
+    );
+  };
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#1E1E1E]">
@@ -61,7 +84,7 @@ export default function Login() {
             <div className="mx-4 text-sm text-gray-400">Or</div>
             <div className="flex-1 h-px bg-gray-700"></div>
           </div>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             
             <div className="mb-4">
               <input 
@@ -116,9 +139,10 @@ export default function Login() {
             
             <button 
               type="submit" 
-              className="w-full bg-[#FF5757] hover:bg-[#FF6B6B] text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200"
+              disabled={isPending}
+              className={`w-full bg-[#FF5757] hover:bg-[#FF6B6B] text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 ${isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Sign In
+              {isPending ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
           <div className="mt-4 text-xs text-gray-400">
