@@ -2,6 +2,33 @@ import { z } from "zod";
 
 export type LessonJson = Record<string, unknown>;
 
+export type ModuleDependencySnapshot = {
+    moduleId: number;
+    prerequisiteModuleIds: number[];
+    dependencyType: "prerequisite" | "corequisite" | "supplementary" | null;
+    isOptional: boolean;
+};
+
+export type ProgressModuleSnapshot = {
+    moduleId: number;
+    title: string | null;
+    position: number | null;
+    lessons: LessonJson[];
+};
+
+export type RoadmapProgressSnapshot = {
+    threadId: string;
+    topic: string | null;
+    domain: string | null;
+    requiresPrereqs: boolean | null;
+    bootstrapSummary: unknown;
+    graphContext: unknown;
+    prerequisitePlan: unknown;
+    modules: ProgressModuleSnapshot[];
+    dependencies: ModuleDependencySnapshot[];
+    updatedAt?: string;
+};
+
 export type LearningPathListItem = {
     pathId: number;
     query: string | null;
@@ -35,6 +62,9 @@ export type ModulePayload = {
     progress: ModuleProgressPayload | null;
     createdAt: string | null;
     updatedAt: string | null;
+    prerequisites: number[];
+    dependencyType: "prerequisite" | "corequisite" | "supplementary" | null;
+    isOptionalDependency: boolean;
 };
 
 export type LearningPathPayload = {
@@ -45,7 +75,9 @@ export type LearningPathPayload = {
     tags: string[];
     createdAt: string | null;
     updatedAt: string | null;
-    progress: unknown;
+    progress: RoadmapProgressSnapshot | null;
+    roadmapState: RoadmapProgressSnapshot | null;
+    threadId: string | null;
     moduleCount: number;
     modules: ModulePayload[];
     visibility: "public" | "private" | "restricted";

@@ -4,7 +4,7 @@ import { and, eq, ilike, inArray, not, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "../drizzle";
-import { learningModule, learningPath, learningPathModule, userModuleProgress, users } from "../drizzle/schema";
+import { learningModule, learningPath, learningPathModule, moduleDependency, userModuleProgress, users } from "../drizzle/schema";
 
 import type {
     LessonJson,
@@ -13,6 +13,9 @@ import type {
     ProgressModuleInput,
     ModulePayload,
     ModuleProgressPayload,
+    ProgressModuleSnapshot,
+    ModuleDependencySnapshot,
+    RoadmapProgressSnapshot,
 } from "../schema/roadmapSchema";
 import { updateLearningPathSchema } from "../schema/roadmapSchema";
 import type { UserSearchQuery } from "../schema/friendSchema";
@@ -52,28 +55,106 @@ function normalizeLessons(value: unknown): LessonJson[] {
 function buildProgressState(
     previous: unknown,
     modules: ProgressModuleInput[],
+    dependencies: ModuleDependencySnapshot[],
     timestamp: string,
-): Record<string, unknown> {
-    const base = isRecord(previous) ? { ...previous } : {};
+    threadId?: string | null,
+): RoadmapProgressSnapshot {
+    const prevRecord = isRecord(previous) ? (previous as Record<string, unknown>) : {};
 
-    base.modules = modules.map((module) => ({
-        moduleId: module.moduleId,
-        title: module.title,
-        position: module.position,
-        lessons: module.lessons.map((lesson) => {
-            if (isRecord(lesson)) {
-                return {
-                    ...lesson,
-                    completed: typeof lesson.completed === "boolean" ? lesson.completed : false,
-                };
-            }
-            return { completed: false };
-        }),
-    }));
+    const snapshot: RoadmapProgressSnapshot = {
+        threadId:
+            typeof prevRecord.threadId === "string" && prevRecord.threadId.trim().length > 0
+                ? (prevRecord.threadId as string)
+                : threadId ?? "",
+        topic: typeof prevRecord.topic === "string" ? (prevRecord.topic as string) : null,
+        domain: typeof prevRecord.domain === "string" ? (prevRecord.domain as string) : null,
+        requiresPrereqs:
+            typeof prevRecord.requiresPrereqs === "boolean"
+                ? (prevRecord.requiresPrereqs as boolean)
+                : null,
+        bootstrapSummary: prevRecord.bootstrapSummary ?? null,
+        graphContext: prevRecord.graphContext ?? null,
+        prerequisitePlan: prevRecord.prerequisitePlan ?? null,
+        modules: modules.map((module) => ({
+            moduleId: module.moduleId,
+            title: module.title,
+            position: module.position,
+            lessons: module.lessons.map((lesson) => {
+                if (isRecord(lesson)) {
+                    return {
+                        ...lesson,
+                        completed: typeof lesson.completed === "boolean" ? lesson.completed : false,
+                    } as LessonJson;
+                }
+                return { completed: false } as LessonJson;
+            }),
+        })),
+        dependencies,
+        updatedAt: timestamp,
+    };
 
-    base.updatedAt = timestamp;
+    if (threadId && threadId.trim().length > 0) {
+        snapshot.threadId = threadId;
+    }
 
-    return base;
+    return snapshot;
+}
+
+function coerceRoadmapState(
+    value: unknown,
+    fallbackThreadId: string | null,
+    dependencies: ModuleDependencySnapshot[],
+): RoadmapProgressSnapshot | null {
+    if (!isRecord(value)) {
+        if (!fallbackThreadId && dependencies.length === 0) {
+            return null;
+        }
+
+        return fallbackThreadId
+            ? {
+                  threadId: fallbackThreadId,
+                  topic: null,
+                  domain: null,
+                  requiresPrereqs: null,
+                  bootstrapSummary: null,
+                  graphContext: null,
+                  prerequisitePlan: null,
+                  modules: [],
+                  dependencies,
+              }
+            : null;
+    }
+
+    const record = value as Record<string, unknown>;
+
+    const snapshot: RoadmapProgressSnapshot = {
+        threadId:
+            typeof record.threadId === "string" && record.threadId.trim().length > 0
+                ? (record.threadId as string)
+                : fallbackThreadId ?? "",
+        topic: typeof record.topic === "string" ? (record.topic as string) : null,
+        domain: typeof record.domain === "string" ? (record.domain as string) : null,
+        requiresPrereqs:
+            typeof record.requiresPrereqs === "boolean"
+                ? (record.requiresPrereqs as boolean)
+                : null,
+        bootstrapSummary: record.bootstrapSummary ?? null,
+        graphContext: record.graphContext ?? null,
+        prerequisitePlan: record.prerequisitePlan ?? null,
+        modules: Array.isArray(record.modules)
+            ? (record.modules as ProgressModuleSnapshot[])
+            : [],
+        dependencies: Array.isArray(record.dependencies)
+            ? (record.dependencies as ModuleDependencySnapshot[])
+            : dependencies,
+        updatedAt: typeof record.updatedAt === "string" ? (record.updatedAt as string) : undefined,
+    };
+
+    if (!snapshot.dependencies.length && dependencies.length) {
+        snapshot.dependencies = dependencies;
+    }
+
+    return snapshot;
 }
 
 
@@ -216,6 +297,7 @@ async function fetchLearningPathsPayload(
             updatedAt: learningPath.updatedAt,
             visibility: learningPath.visibility,
             progress: learningPath.progress,
+            threadId: learningPath.threadId,
         })
         .from(learningPath)
         .where(whereClause);
@@ -249,6 +331,20 @@ async function fetchLearningPathsPayload(
             .where(inArray(learningPathModule.pathId, collectedPathIds))
         : [];
 
+    const moduleIds = moduleRows.map((row) => row.moduleId);
+
+    const dependencyRows = moduleIds.length > 0
+        ? await db
+            .select({
+                moduleId: moduleDependency.moduleId,
+                prerequisiteIds: moduleDependency.prerequisiteId,
+                dependencyType: moduleDependency.dependencyType,
+                isOptional: moduleDependency.isOptional,
+            })
+            .from(moduleDependency)
+            .where(inArray(moduleDependency.moduleId, moduleIds))
+        : [];
+
     const progressRows = collectedPathIds.length > 0
         ? await db
             .select({
@@ -269,6 +365,8 @@ async function fetchLearningPathsPayload(
 
     const modulesByPath = new Map<number, ModulePayload[]>();
     const progressByPath = new Map<number, Map<number, ModuleProgressPayload>>();
+    const dependenciesByModule = new Map<number, ModuleDependencySnapshot>();
+    const dependencySnapshotsByPath = new Map<number, ModuleDependencySnapshot[]>();
 
     for (const progress of progressRows) {
         const moduleProgress: ModuleProgressPayload = {
@@ -286,13 +384,31 @@ async function fetchLearningPathsPayload(
         progressByPath.get(progress.pathId)!.set(progress.moduleId, moduleProgress);
     }
 
-    moduleRows.forEach((row) => {
+    for (const dependency of dependencyRows) {
+        const snapshot: ModuleDependencySnapshot = {
+            moduleId: dependency.moduleId,
+            prerequisiteModuleIds: Array.isArray(dependency.prerequisiteIds)
+                ? dependency.prerequisiteIds
+                : [],
+            dependencyType: (dependency.dependencyType as ModuleDependencySnapshot["dependencyType"]) ?? null,
+            isOptional: dependency.isOptional ?? false,
+        };
+
+        dependenciesByModule.set(dependency.moduleId, snapshot);
+    }
+
+    for (const row of moduleRows) {
         if (!modulesByPath.has(row.pathId)) {
             modulesByPath.set(row.pathId, []);
         }
 
         const pathProgress = progressByPath.get(row.pathId);
         const moduleProgress = pathProgress?.get(row.moduleId) ?? null;
+        const dependencyRecord = dependenciesByModule.get(row.moduleId);
+
+        const prerequisites = dependencyRecord ? [...dependencyRecord.prerequisiteModuleIds] : [];
+        const dependencyType = dependencyRecord?.dependencyType ?? null;
+        const isOptionalDependency = dependencyRecord?.isOptional ?? false;
 
         modulesByPath.get(row.pathId)!.push({
             pathModuleId: row.pathModuleId,
@@ -308,8 +424,18 @@ async function fetchLearningPathsPayload(
             progress: moduleProgress,
             createdAt: row.moduleCreatedAt ?? null,
             updatedAt: row.moduleUpdatedAt ?? row.pathModuleUpdatedAt ?? null,
+            prerequisites,
+            dependencyType,
+            isOptionalDependency,
         });
-    });
+
+        if (dependencyRecord) {
+            if (!dependencySnapshotsByPath.has(row.pathId)) {
+                dependencySnapshotsByPath.set(row.pathId, []);
+            }
+            dependencySnapshotsByPath.get(row.pathId)!.push({ ...dependencyRecord });
+        }
+    }
 
     return paths
         .map((path) => {
@@ -322,6 +448,12 @@ async function fetchLearningPathsPayload(
                 return a.pathModuleId - b.pathModuleId;
             });
 
+            const dependenciesForPath = dependencySnapshotsByPath.get(path.pathId) ?? [];
+            const roadmapState = coerceRoadmapState(path.progress, path.threadId ?? null, dependenciesForPath);
+            const threadId = typeof path.threadId === "string" && path.threadId.trim().length > 0
+                ? path.threadId
+                : roadmapState?.threadId ?? null;
+
             return {
                 pathId: path.pathId,
                 query: path.userQuery ?? null,
@@ -332,11 +464,12 @@ async function fetchLearningPathsPayload(
                     : [],
                 createdAt: path.createdAt ?? null,
                 updatedAt: path.updatedAt ?? null,
-                progress: path.progress ?? null,
+                progress: roadmapState,
+                threadId,
                 moduleCount: modules.length,
                 modules: includeDetails ? modules : [],
                 visibility: (path.visibility ?? "private") as "public" | "private" | "restricted",
-            };
+            } as LearningPathPayload;
         })
         .sort((a, b) => {
             const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -345,9 +478,8 @@ async function fetchLearningPathsPayload(
         });
 }
 
-
 export const getLearningPaths = async (req: Request, res: Response) => {
-    const { user_id: userId } = req
+    const { user_id: userId } = req;
     if (!userId) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
             success: false,
@@ -366,11 +498,10 @@ export const getLearningPaths = async (req: Request, res: Response) => {
             moduleCount: path.moduleCount,
             createdAt: path.createdAt,
             updatedAt: path.updatedAt,
-            lastUpdatedAt: path.progress && isRecord(path.progress) && typeof path.progress.updatedAt === "string"
-                ? (path.progress.updatedAt as string)
-                : path.updatedAt,
+            lastUpdatedAt: path.roadmapState?.updatedAt ?? path.updatedAt,
             visibility: path.visibility,
         }));
+
         return res.status(StatusCodes.OK).json({
             success: true,
             learningPaths: summarized,
@@ -385,7 +516,7 @@ export const getLearningPaths = async (req: Request, res: Response) => {
 };
 
 export const updateLearningPath = async (req: Request, res: Response) => {
-    const { user_id: userId } = req
+    const { user_id: userId } = req;
     if (!userId) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
             success: false,
@@ -569,7 +700,35 @@ export const updateLearningPath = async (req: Request, res: Response) => {
                 lessons: normalizeLessons(module.lessons),
             }));
 
-            const updatedProgress = buildProgressState(existingPath.progress, normalizedProgressModules, nowIso);
+            const moduleIdsForProgress = progressModules.map((module) => module.moduleId);
+            const dependencyRows = moduleIdsForProgress.length > 0
+                ? await tx
+                    .select({
+                        moduleId: moduleDependency.moduleId,
+                        prerequisiteIds: moduleDependency.prerequisiteId,
+                        dependencyType: moduleDependency.dependencyType,
+                        isOptional: moduleDependency.isOptional,
+                    })
+                    .from(moduleDependency)
+                    .where(inArray(moduleDependency.moduleId, moduleIdsForProgress))
+                : [];
+
+            const dependencySnapshots: ModuleDependencySnapshot[] = dependencyRows.map((dependency) => ({
+                moduleId: dependency.moduleId,
+                prerequisiteModuleIds: Array.isArray(dependency.prerequisiteIds)
+                    ? dependency.prerequisiteIds
+                    : [],
+                dependencyType: (dependency.dependencyType as ModuleDependencySnapshot["dependencyType"]) ?? null,
+                isOptional: dependency.isOptional ?? false,
+            }));
+
+            const updatedProgress = buildProgressState(
+                existingPath.progress,
+                normalizedProgressModules,
+                dependencySnapshots,
+                nowIso,
+                existingPath.threadId ?? null,
+            );
 
             pathUpdates.updatedAt = nowIso;
             pathUpdates.progress = updatedProgress;

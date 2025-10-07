@@ -6,12 +6,18 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 import { roadmapGraph } from "../agents/roadmapGenerator/graph";
-import { RoadmapModule } from "../agents/roadmapGenerator/state";
+import {
+    ContextBootstrapSummary,
+    GraphContextSnapshot,
+    PrerequisitePlanSummary,
+    RoadmapModule,
+} from "../agents/roadmapGenerator/state";
 import { db } from "../drizzle";
 import {
     learningModule,
     learningPath,
     learningPathModule,
+    moduleDependency,
     studyGroup,
     users,
 } from "../drizzle/schema";
@@ -19,6 +25,7 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { getSession } from "../utils/authUtils";
 import {
     PublicRoadmapListQuery,
+    ModuleDependencySnapshot,
     publicRoadmapListQuerySchema,
     setLearningPathVisibilitySchema,
 } from "../schema/roadmapSchema";
@@ -73,6 +80,10 @@ export const roadmapGenerator = async (req: Request, res: Response) => {
             snapshotValues?.prerequisitePlan && typeof snapshotValues.prerequisitePlan === "object"
                 ? JSON.parse(JSON.stringify(snapshotValues.prerequisitePlan))
                 : null;
+        const graphContext =
+            snapshotValues?.graphContext && typeof snapshotValues.graphContext === "object"
+                ? JSON.parse(JSON.stringify(snapshotValues.graphContext))
+                : null;
 
         return res.json({
             success: true,
@@ -81,6 +92,7 @@ export const roadmapGenerator = async (req: Request, res: Response) => {
             domain,
             requiresPrereqs,
             bootstrapSummary,
+            graphContext,
             prerequisitePlan,
             modules,
         });
@@ -121,10 +133,34 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     let modules: RoadmapModule[] = [];
     let domain: string | null = null;
     let requiresPrereqs: boolean | null = null;
-    let bootstrapSummary: Record<string, unknown> | null = null;
-    let graphContext: Record<string, unknown> | null = null;
-    let prerequisitePlan: Record<string, unknown> | null = null;
+    let bootstrapSummary: ContextBootstrapSummary | null = null;
+    let graphContext: GraphContextSnapshot | null = null;
+    let prerequisitePlan: PrerequisitePlanSummary | null = null;
     let resolvedTopic = topic;
+
+    const toSearchableText = (module: RoadmapModule): string => {
+        const parts: string[] = [module.title ?? "", module.description ?? ""];
+        for (const lesson of module.lessons) {
+            parts.push(lesson.title ?? "");
+            if (typeof lesson.description === "string") {
+                parts.push(lesson.description);
+            }
+            for (const resource of lesson.recommendedResources ?? []) {
+                if (typeof resource === "string" && resource.trim().length > 0) {
+                    parts.push(resource);
+                }
+            }
+            if (typeof lesson.masteryCheck === "string" && lesson.masteryCheck.trim().length > 0) {
+                parts.push(lesson.masteryCheck);
+            }
+        }
+        return parts
+            .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+            .join(" ")
+            .toLowerCase();
+    };
+
+    const prereqTitlePattern = /(on[-\s]?ramp|prerequisite|foundation|essentials|readiness|primer)/i;
 
     try {
         const snapshot = await roadmapGraph.getState({
@@ -181,6 +217,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                     userId: session.userId,
                     userQuery: topic,
                     userGoal: goal ?? null,
+                    threadId,
                     isCustomized: false,
                     difficultyLevel: difficulty ?? null,
                     tags: tags ?? null,
@@ -200,6 +237,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                 position: number;
                 title: string;
             }> = [];
+            const moduleAggregates = new Map<number, string>();
 
             for (const [index, module] of modules.entries()) {
                 const totalHours = module.lessons.reduce((sum, lesson) => {
@@ -236,6 +274,8 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                     title: module.title,
                 });
 
+                moduleAggregates.set(moduleRow.moduleId, toSearchableText(module));
+
                 await tx.insert(learningPathModule).values({
                     pathId,
                     moduleId: moduleRow.moduleId,
@@ -247,6 +287,80 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                 });
             }
 
+            const orderedModules = [...insertedModules].sort((a, b) => a.position - b.position);
+            const moduleMetaById = new Map(orderedModules.map((meta) => [meta.moduleId, meta]));
+            const onRampModule = orderedModules.find((meta) => prereqTitlePattern.test(meta.title)) ?? orderedModules[0] ?? null;
+
+            const conceptMap = new Map<string, Set<number>>();
+            if (prerequisitePlan && Array.isArray(prerequisitePlan.steps)) {
+                for (const step of prerequisitePlan.steps) {
+                    const term = step.conceptName?.toLowerCase().trim();
+                    if (!term) continue;
+                    for (const meta of orderedModules) {
+                        const aggregate = moduleAggregates.get(meta.moduleId) ?? "";
+                        if (aggregate.includes(term)) {
+                            if (!conceptMap.has(term)) {
+                                conceptMap.set(term, new Set());
+                            }
+                            conceptMap.get(term)!.add(meta.moduleId);
+                        }
+                    }
+                }
+            }
+
+            const dependenciesSnapshot: ModuleDependencySnapshot[] = [];
+
+            for (const meta of orderedModules) {
+                if (meta.position <= 1) continue;
+
+                const prerequisites = new Set<number>();
+                const targetAggregate = moduleAggregates.get(meta.moduleId) ?? "";
+
+                const immediatePrevious = orderedModules.find((candidate) => candidate.position === meta.position - 1);
+                if (immediatePrevious) {
+                    prerequisites.add(immediatePrevious.moduleId);
+                }
+
+                if (onRampModule && onRampModule.moduleId !== meta.moduleId) {
+                    prerequisites.add(onRampModule.moduleId);
+                }
+
+                for (const [term, moduleIds] of conceptMap.entries()) {
+                    if (!targetAggregate.includes(term)) {
+                        continue;
+                    }
+                    for (const moduleId of moduleIds) {
+                        if (moduleId === meta.moduleId) continue;
+                        const candidate = moduleMetaById.get(moduleId);
+                        if (candidate && candidate.position < meta.position) {
+                            prerequisites.add(candidate.moduleId);
+                        }
+                    }
+                }
+
+                const prerequisiteIds = Array.from(prerequisites).filter((id) => id !== meta.moduleId);
+                prerequisiteIds.sort((a, b) => a - b);
+
+                if (prerequisiteIds.length === 0) {
+                    continue;
+                }
+
+                await tx.insert(moduleDependency).values({
+                    moduleId: meta.moduleId,
+                    prerequisiteId: prerequisiteIds,
+                    dependencyType: "prerequisite",
+                    isOptional: false,
+                    createdAt: nowIso,
+                });
+
+                dependenciesSnapshot.push({
+                    moduleId: meta.moduleId,
+                    prerequisiteModuleIds: prerequisiteIds,
+                    dependencyType: "prerequisite",
+                    isOptional: false,
+                });
+            }
+
             const progressPayload = {
                 threadId,
                 topic: resolvedTopic,
@@ -255,6 +369,8 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                 bootstrapSummary,
                 graphContext,
                 prerequisitePlan,
+                updatedAt: nowIso,
+                dependencies: dependenciesSnapshot,
                 modules: insertedModules.map((moduleMeta) => {
                     const originalModule = modules[moduleMeta.position - 1];
                     return {
@@ -286,7 +402,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                 })
                 .where(eq(learningPath.pathId, pathId));
 
-            return { pathId, insertedModules, progress: progressPayload };
+            return { pathId, insertedModules, progress: progressPayload, dependencies: dependenciesSnapshot };
         });
 
         return res.status(StatusCodes.CREATED).json({
@@ -298,6 +414,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
             bootstrapSummary,
             graphContext,
             prerequisitePlan,
+            dependencies: result.dependencies,
             savedModules: result.insertedModules,
         });
     } catch (error) {

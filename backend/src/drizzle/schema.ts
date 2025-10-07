@@ -101,6 +101,7 @@ export const learningPath = pgTable("learning_path", {
 	userId: integer("user_id").notNull(),
 	userQuery: text("user_query"),
 	userGoal: text("user_goal"),
+	threadId: text("thread_id"),
 	progress: jsonb(),
 	isCustomized: boolean("is_customized").default(false),
 	difficultyLevel: difficultyLevel("difficulty_level"),
