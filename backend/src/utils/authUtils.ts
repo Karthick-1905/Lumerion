@@ -11,6 +11,23 @@ const sessionSchema = z.object({
 
 type UserSession = z.infer<typeof sessionSchema>
 
+const DEFAULT_SESSION_EXPIRATION_SECONDS = 60 * 60 * 24 * 7 // 7 days
+
+export function getSessionExpirationSeconds() {
+  const raw = process.env.SESSION_EXPIRATION_SECONDS
+  if (!raw) {
+    return DEFAULT_SESSION_EXPIRATION_SECONDS
+  }
+
+  const parsed = parseInt(raw, 10)
+
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return DEFAULT_SESSION_EXPIRATION_SECONDS
+  }
+
+  return parsed
+}
+
 
 export function hashPassword(password: string, salt: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -48,7 +65,7 @@ export async function createSession(sessionId: string, userId: number) {
     `session:${sessionId}`,
     JSON.stringify(session),
     "EX",
-    parseInt(process.env.SESSION_EXPIRATION_SECONDS || "604800", 10) // 7 days default
+    getSessionExpirationSeconds()
   )
 
   return session

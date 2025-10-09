@@ -195,6 +195,68 @@ export const userModuleProgress = pgTable("user_module_progress", {
 	unique("user_module_progress_user_id_module_id_path_id_key").on(table.userId, table.moduleId, table.pathId),
 ]);
 
+export const quiz = pgTable("quiz", {
+	quizId: serial("quiz_id").primaryKey().notNull(),
+	moduleId: integer("module_id").notNull(),
+	pathId: integer("path_id").notNull(),
+	lessonIndex: integer("lesson_index").default(null),
+	title: text("title").notNull(),
+	description: text("description"),
+	metadata: jsonb("metadata").default({}).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.moduleId],
+		foreignColumns: [learningModule.moduleId],
+		name: "quiz_module_id_fkey",
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.pathId],
+		foreignColumns: [learningPath.pathId],
+		name: "quiz_path_id_fkey",
+	}).onDelete("cascade"),
+]);
+
+export const quizQuestion = pgTable("quiz_question", {
+	questionId: serial("question_id").primaryKey().notNull(),
+	quizId: integer("quiz_id").notNull(),
+	prompt: text("prompt").notNull(),
+	questionType: varchar("question_type", { length: 50 }),
+	choices: jsonb("choices"),
+	answer: text("answer"),
+	explanation: text("explanation"),
+	metadata: jsonb("metadata").default({}).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.quizId],
+		foreignColumns: [quiz.quizId],
+		name: "quiz_question_quiz_id_fkey",
+	}).onDelete("cascade"),
+]);
+
+export const userQuizAnswer = pgTable("user_quiz_answer", {
+	answerId: serial("answer_id").primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	questionId: integer("question_id").notNull(),
+	answer: text("answer").notNull(),
+	isCorrect: boolean("is_correct"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.userId],
+		foreignColumns: [users.userId],
+		name: "user_quiz_answer_user_id_fkey",
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.questionId],
+		foreignColumns: [quizQuestion.questionId],
+		name: "user_quiz_answer_question_id_fkey",
+	}).onDelete("cascade"),
+	unique("user_quiz_answer_user_question_unique").on(table.userId, table.questionId),
+]);
+
 export const studyGroup = pgTable("study_group", {
 	groupId: serial("group_id").primaryKey().notNull(),
 	groupName: varchar("group_name", { length: 255 }).notNull(),

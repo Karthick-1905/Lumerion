@@ -7,12 +7,12 @@ import type {
 	ContextBootstrapNodeOutput,
 	ContextBootstrapSummary,
 	LearnerProfileSnapshot,
-} from "../state.ts";
-import { contextBootstrapPromptTemplate } from "../prompt.ts";
-import { createGeminiModel } from "../utils/modelProvider.ts";
-import { messageContentToString } from "../utils/messages.ts";
-import { userProfileTool } from "../tool.ts";
-import { normaliseStringList } from "../utils/text.ts";
+} from "../state";
+import { contextBootstrapPromptTemplate } from "../prompt";
+import { createGeminiModel } from "../utils/modelProvider";
+import { messageContentToString } from "../utils/messages";
+import { userProfileTool } from "../tool";
+import { normaliseStringList } from "../utils/text";
 
 const contextBootstrapSchema = z.object({
 	topic_statement: z.string().min(1, "Topic statement cannot be empty"),

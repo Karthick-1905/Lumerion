@@ -8,10 +8,10 @@ import type {
 	PrerequisitePlanSummary,
 	RoadmapLesson,
 	RoadmapModule,
-} from "../state.ts";
-import { curriculumComposerPromptTemplate } from "../prompt.ts";
-import { createGeminiModel } from "../utils/modelProvider.ts";
-import { normaliseStringList } from "../utils/text.ts";
+} from "../state";
+import { curriculumComposerPromptTemplate } from "../prompt";
+import { createGeminiModel } from "../utils/modelProvider";
+import { normaliseStringList } from "../utils/text";
 
 const lessonSchema = z.object({
 	title: z.string().min(1),
@@ -32,6 +32,190 @@ const curriculumComposerSchema = z.object({
 });
 
 type CurriculumComposerRawOutput = z.infer<typeof curriculumComposerSchema>;
+
+const normaliseKey = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+const fallbackResourceLibrary: Array<{
+	keywords: string[];
+	resources: string[];
+}> = [
+	{
+		keywords: ["network", "networking", "computer science", "cs"],
+		resources: normaliseStringList([
+			"Khan Academy – Internet networking (https://www.khanacademy.org/computing/computer-science/internet-intro)",
+			"CS50x 2024 – Lecture on computer science fundamentals (https://cs50.harvard.edu/x/2024/)",
+		]),
+	},
+	{
+		keywords: ["cryptograph"],
+		resources: normaliseStringList([
+			"Khan Academy – Cryptography (https://www.khanacademy.org/computing/computer-science/cryptography)",
+			"Cryptography Engineering by Ferguson, Schneier & Kohno",
+		]),
+	},
+	{
+		keywords: ["decentralization", "decentralisation", "decentralized"],
+		resources: normaliseStringList([
+			"The Decentralized Web Primer (https://getdweb.com/)",
+			"Understanding Decentralization by Vitalik Buterin",
+		]),
+	},
+	{
+		keywords: ["blockchain"],
+		resources: normaliseStringList([
+			"Mastering Bitcoin by Andreas M. Antonopoulos",
+			"Coursera – Blockchain Basics by University at Buffalo",
+		]),
+	},
+	{
+		keywords: ["consensus", "proof-of-work", "proof-of-stake"],
+		resources: normaliseStringList([
+			"Ethereum.org – Consensus mechanisms overview (https://ethereum.org/en/developers/docs/consensus-mechanisms/)",
+			"Proof-of-Work vs Proof-of-Stake – Basic Mining Guide",
+		]),
+	},
+	{
+		keywords: ["nft", "non-fungible"],
+		resources: normaliseStringList([
+			"NFTs: A Primer by Linda Xie (https://a16zcrypto.com/content/article/nfts-a-primer/)",
+			"OpenSea NFT Resource Center (https://opensea.io/learn)",
+		]),
+	},
+	{
+		keywords: ["smart contract"],
+		resources: normaliseStringList([
+			"Ethereum.org – Smart contract documentation (https://ethereum.org/en/developers/docs/smart-contracts/)",
+			"Solidity by Example (https://solidity-by-example.org/)",
+		]),
+	},
+	{
+		keywords: ["web3", "defi", "dao"],
+		resources: normaliseStringList([
+			"Web3 Foundation resources (https://web3.foundation/)",
+			"DappRadar – Track decentralized applications (https://dappradar.com/)",
+		]),
+	},
+	{
+		keywords: ["nft marketplace", "project", "hands-on"],
+		resources: normaliseStringList([
+			"OpenSea – Getting Started guide (https://support.opensea.io/hc/en-us/articles/1500006315942-Getting-Started)",
+			"buildspace – Build Web3 projects (https://buildspace.so/)",
+		]),
+	},
+];
+
+const fallbackMasteryCheck = (lessonTitle: string, moduleTitle: string): string => {
+	const concept = lessonTitle.trim();
+	return `Demonstrate mastery by explaining "${concept}" to a peer, outlining a real-world example, and answering questions without notes. Share how it reinforces the "${moduleTitle}" module objectives.`;
+};
+
+const findPlanStepMatch = (
+	lessonTitle: string,
+	plan: PrerequisitePlanSummary | null,
+): PrerequisitePlanSummary["steps"][number] | null => {
+	if (!plan) return null;
+	const lessonKey = normaliseKey(lessonTitle);
+	if (!lessonKey) return null;
+	const directMatch = plan.steps.find((step) => {
+		const stepKey = normaliseKey(step.conceptName);
+		return stepKey.length > 0 && (lessonKey.includes(stepKey) || stepKey.includes(lessonKey));
+	});
+	if (directMatch) return directMatch;
+	return (
+		plan.steps
+			.map((step) => ({
+				step,
+				score: step.conceptName
+					.toLowerCase()
+					.split(/\s+/)
+					.filter((token) => lessonKey.includes(token))
+					.length,
+			}))
+			.filter(({ score }) => score > 0)
+			.sort((a, b) => b.score - a.score)[0]?.step ?? null
+	);
+};
+
+const gatherGraphResources = (
+	lessonTitle: string,
+	graphContext: GraphContextSnapshot | null,
+	limit = 3,
+): string[] => {
+	if (!graphContext) return [];
+	const lessonKey = normaliseKey(lessonTitle);
+	return graphContext.relatedResources
+		.filter((resource) => {
+			const titleKey = normaliseKey(resource.title ?? "");
+			return titleKey.length > 0 && (lessonKey.includes(titleKey) || titleKey.includes(lessonKey));
+		})
+		.slice(0, limit)
+		.map((resource) => {
+			const parts: string[] = [resource.title];
+			if (resource.url) parts.push(resource.url);
+			return parts.filter(Boolean).join(" – ");
+		});
+};
+
+const fallbackResourcesForLesson = (lessonTitle: string): string[] => {
+	const lessonKey = normaliseKey(lessonTitle);
+	for (const entry of fallbackResourceLibrary) {
+		const matches = entry.keywords.some((keyword) => lessonKey.includes(keyword));
+		if (matches) {
+			return entry.resources;
+		}
+	}
+	return normaliseStringList([
+		`${lessonTitle} – explore official documentation and reputable tutorials (e.g., freeCodeCamp, Coursera, or vendor docs).`,
+		`Watch a conference talk or workshop on ${lessonTitle} to see practical implementations.`,
+	]);
+};
+
+const enrichModules = (
+	modules: RoadmapModule[],
+	plan: PrerequisitePlanSummary | null,
+	graphContext: GraphContextSnapshot | null,
+): RoadmapModule[] => {
+	return modules.map((module) => {
+		const updatedLessons = module.lessons.map((lesson) => {
+			const baseResources = normaliseStringList(lesson.recommendedResources ?? []);
+			const planMatch = findPlanStepMatch(lesson.title, plan);
+			const planResources = planMatch ? normaliseStringList(planMatch.recommendedResources ?? []) : [];
+			const graphResources = gatherGraphResources(lesson.title, graphContext);
+			const combinedResources = normaliseStringList([
+				...baseResources,
+				...planResources,
+				...graphResources,
+			]);
+
+			const resources = combinedResources.length > 0
+				? combinedResources
+				: fallbackResourcesForLesson(lesson.title);
+
+			const masteryCheck = lesson.masteryCheck && lesson.masteryCheck.trim().length > 0
+				? lesson.masteryCheck.trim()
+				: planMatch && planMatch.masteryCheck
+					? planMatch.masteryCheck.trim()
+					: fallbackMasteryCheck(lesson.title, module.title);
+
+			return {
+				...lesson,
+				recommendedResources: resources,
+				masteryCheck,
+			};
+		});
+
+		return {
+			...module,
+			lessons: updatedLessons,
+		};
+	});
+};
+
+export const curriculumComposerInternals = {
+	enrichModules,
+	fallbackResourcesForLesson,
+	fallbackMasteryCheck,
+};
 
 const formatPrerequisitePlanForPrompt = (plan: PrerequisitePlanSummary | null): string => {
 	if (!plan || plan.steps.length === 0) {
@@ -261,10 +445,12 @@ export const curriculumComposerNode = async (
 		config,
 	)) as CurriculumComposerRawOutput;
 
-	const modules: RoadmapModule[] = integratePrerequisitePlan(
+	const integratedModules: RoadmapModule[] = integratePrerequisitePlan(
 		rawOutput.modules.map(mapModule),
 		plan,
 	);
 
-	return { modules };
+	const enrichedModules = enrichModules(integratedModules, plan, graphContext);
+
+	return { modules: enrichedModules };
 };

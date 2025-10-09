@@ -172,6 +172,26 @@ export const RoadmapStateAnnotation = Annotation.Root({
 		default: () => [],
 		reducer: (_left, right) => right,
 	}),
+	reflection: Annotation<{
+		changes: string[];
+		retries: number;
+	}>({
+		default: () => ({ changes: [], retries: 0 }),
+		reducer: (left, right) => ({
+			changes: Array.isArray(right?.changes) ? right.changes : left.changes,
+			retries: typeof right?.retries === 'number' ? right.retries : left.retries,
+		}),
+	}),
+	quizzes: Annotation<{
+		quizzes: Array<{
+			moduleTitle: string;
+			lessonIndex?: number | null;
+			questions: Array<{ prompt: string; type?: string; choices?: string[]; answer?: string }>;
+		}>;
+	}>({
+		default: () => ({ quizzes: [] }),
+		reducer: (_left, right) => right ?? { quizzes: [] },
+	}),
 });
 
 export type RoadmapInputState = typeof RoadmapInputAnnotation.State;

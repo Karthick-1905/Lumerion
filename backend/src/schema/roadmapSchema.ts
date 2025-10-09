@@ -2,6 +2,9 @@ import { z } from "zod";
 
 export type LessonJson = Record<string, unknown>;
 
+export const moduleProgressStatusEnum = z.enum(["not_started", "in_progress", "completed"]);
+export type ModuleProgressStatus = z.infer<typeof moduleProgressStatusEnum>;
+
 export type ModuleDependencySnapshot = {
     moduleId: number;
     prerequisiteModuleIds: number[];
@@ -43,7 +46,7 @@ export type LearningPathListItem = {
 };
 
 export type ModuleProgressPayload = {
-    status: string;
+    status: ModuleProgressStatus;
     completionPercent: number;
     lastAccessed: string | null;
 };
@@ -82,6 +85,25 @@ export type LearningPathPayload = {
     modules: ModulePayload[];
     visibility: "public" | "private" | "restricted";
 };
+
+export const updateModuleProgressSchema = z
+    .object({
+        completionPercent: z.number().min(0).max(100).optional(),
+        status: moduleProgressStatusEnum.optional(),
+        markCompleted: z.boolean().optional(),
+    })
+    .refine(
+        (data) =>
+            data.markCompleted === true ||
+            typeof data.completionPercent === "number" ||
+            typeof data.status === "string",
+        {
+            message: "Provide at least one progress field.",
+            path: [],
+        },
+    );
+
+export type UpdateModuleProgressInput = z.infer<typeof updateModuleProgressSchema>;
 
 export const pathIdParamsSchema = z.object({
     pathId: z.coerce.number().int().positive(),

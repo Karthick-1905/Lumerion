@@ -5,7 +5,7 @@ import { ForgotPasswordSchema, LoginSchema, RegisterSchema, ResendOTPSchema, Res
 import {db} from "../drizzle";
 import { passwordResetTokens, userEmailVerification, users } from "../drizzle/schema";
 import { and, eq, gt } from "drizzle-orm";
-import { comparePasswords, createSession, deleteSession, generateSalt, generateSessionId, hashPassword } from "../utils/authUtils";
+import { comparePasswords, createSession, deleteSession, generateSalt, generateSessionId, getSessionExpirationSeconds, hashPassword } from "../utils/authUtils";
 import { generateOTP, sendOtpEmail, sendPasswordResetEmail } from "../mailer/authmailer";
 import crypto from 'crypto'
 
@@ -106,11 +106,13 @@ export const loginController = async (
       
       const sessionId = generateSessionId()
       await createSession(sessionId, user.userId)
+
+      const sessionExpirationMs = getSessionExpirationSeconds() * 1000
       
       res.cookie(process.env.COOKIE_SESSION_KEY!, sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: parseInt(process.env.SESSION_EXPIRATION_SECONDS ?? "0", 10) * 1000,
+        maxAge: sessionExpirationMs,
         sameSite: "lax",
       })
       
@@ -189,10 +191,12 @@ export const verifyEmailController = async(
         const sessionId = generateSessionId()
         await createSession(sessionId, user.userId)
         
+        const sessionExpirationMs = getSessionExpirationSeconds() * 1000
+
         res.cookie(process.env.COOKIE_SESSION_KEY!, sessionId, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          maxAge: parseInt(process.env.SESSION_EXPIRATION_SECONDS ?? "0", 10) * 1000,
+          maxAge: sessionExpirationMs,
           sameSite: "lax",
         })
 

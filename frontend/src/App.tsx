@@ -10,9 +10,11 @@ import ProfileSetup from './pages/auth/ProfileSetup'
 import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/dashboard/DashBoard'
 import LearningPathDetail from './pages/learningPath/LearningPathDetail'
+import CreateLearningPath from './pages/learningPath/CreateLearningPath'
 import StudyGroupsList from './pages/studyGroups/StudyGroupsList'
 import StudyGroupDetail from './pages/studyGroups/StudyGroupDetail'
 import MyStudyGroups from './pages/studyGroups/MyStudyGroups'
+import Profile from './pages/profile/Profile'
 
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path='/' element={<MainLayout/>}>
@@ -22,10 +24,12 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route path='/reset-password' element={<ResetPassword/>}/>
       <Route path='/profile-setup' element={<ProfileSetup/>}/>
       <Route path='/dashboard' element={<Dashboard/>}/>
+      <Route path='/learning-paths/create' element={<CreateLearningPath/>}/>
       <Route path='/learning-path/:pathId' element={<LearningPathDetail/>}/>
       <Route path='/study-groups' element={<MyStudyGroups/>}/>
       <Route path='/study-groups/learning-paths/:pathId' element={<StudyGroupsList/>}/>
       <Route path='/study-groups/:groupId' element={<StudyGroupDetail/>}/>
+      <Route path='/profile' element={<Profile/>}/>
       <Route path='*' element={<Navigate to='/login' replace/>}/>
   </Route>
 ))

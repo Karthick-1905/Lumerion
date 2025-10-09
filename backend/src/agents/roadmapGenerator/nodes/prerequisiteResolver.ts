@@ -8,11 +8,11 @@ import type {
 	PrerequisitePlanStep,
 	PrerequisiteResolverNodeInput,
 	PrerequisiteResolverNodeOutput,
-} from "../state.ts";
-import { prerequisiteResolverPromptTemplate } from "../prompt.ts";
-import { createGeminiModel } from "../utils/modelProvider.ts";
-import { normaliseStringList, truncateAndJoin } from "../utils/text.ts";
-import { knowledgeGraphClient } from "../services/graphClient.ts";
+} from "../state";
+import { prerequisiteResolverPromptTemplate } from "../prompt";
+import { createGeminiModel } from "../utils/modelProvider";
+import { normaliseStringList, truncateAndJoin } from "../utils/text";
+import { knowledgeGraphClient } from "../services/graphClient";
 
 const prerequisiteResolverSchema = z.object({
 	prerequisite_sequence: z

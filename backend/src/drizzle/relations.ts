@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, studyGroupMembership, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens, friendRequest, userFriend } from "./schema.ts";
+import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, studyGroupMembership, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens, friendRequest, userFriend } from "./schema";                                                                                                                                                                                                                                                
 
 export const moduleDependencyRelations = relations(moduleDependency, ({one}) => ({
 	learningModule: one(learningModule, {

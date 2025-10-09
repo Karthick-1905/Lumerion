@@ -1,6 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { learningPathApi } from '../api/learningPath';
-import type { LearningPathsResponse, LearningPathDetailResponse, ApiError } from '../api/types';
+import type {
+  LearningPathsResponse,
+  LearningPathDetailResponse,
+  ApiError,
+  ModuleProgressResponse,
+  UpdateModuleProgressPayload,
+} from '../api/types';
 
 // Query Keys
 export const LEARNING_PATH_QUERY_KEYS = {
@@ -23,5 +29,29 @@ export const useLearningPathDetail = (pathId: number) => {
     queryKey: LEARNING_PATH_QUERY_KEYS.detail(pathId),
     queryFn: () => learningPathApi.getPathById(pathId),
     enabled: !!pathId,
+  });
+};
+
+type UpdateModuleProgressVariables = {
+  moduleId: number;
+  payload: UpdateModuleProgressPayload;
+};
+
+export const useUpdateModuleProgress = (pathId?: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ModuleProgressResponse, ApiError, UpdateModuleProgressVariables>({
+    mutationFn: ({ moduleId, payload }) => {
+      if (!pathId || Number.isNaN(pathId)) {
+        const error = new Error('Invalid learning path identifier') as ApiError;
+        error.status = 400;
+        throw error;
+      }
+      return learningPathApi.updateModuleProgress(pathId, moduleId, payload);
+    },
+    onSuccess: () => {
+      if (!pathId || Number.isNaN(pathId)) return;
+      queryClient.invalidateQueries({ queryKey: LEARNING_PATH_QUERY_KEYS.detail(pathId) });
+    },
   });
 };
