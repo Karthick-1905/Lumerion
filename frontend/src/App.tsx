@@ -15,6 +15,7 @@ import StudyGroupsList from './pages/studyGroups/StudyGroupsList'
 import StudyGroupDetail from './pages/studyGroups/StudyGroupDetail'
 import MyStudyGroups from './pages/studyGroups/MyStudyGroups'
 import Profile from './pages/profile/Profile'
+import FriendsPage from './pages/friends/Friends'
 
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path='/' element={<MainLayout/>}>
@@ -29,6 +30,7 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route path='/study-groups' element={<MyStudyGroups/>}/>
       <Route path='/study-groups/learning-paths/:pathId' element={<StudyGroupsList/>}/>
       <Route path='/study-groups/:groupId' element={<StudyGroupDetail/>}/>
+      <Route path='/friends' element={<FriendsPage/>}/>
       <Route path='/profile' element={<Profile/>}/>
       <Route path='*' element={<Navigate to='/login' replace/>}/>
   </Route>

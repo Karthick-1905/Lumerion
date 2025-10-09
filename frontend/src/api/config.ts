@@ -34,6 +34,29 @@ export const API_CONFIG = {
       GET_PUBLIC: '/api/roadmap/public',
       GENERATE: '/api/roadmap/generate',
       SAVE: '/api/roadmap/save'
+    },
+    FRIENDS: {
+      LIST: (limit?: number, offset?: number) => {
+        const params = new URLSearchParams();
+        if (limit !== undefined) params.set('limit', String(limit));
+        if (offset !== undefined) params.set('offset', String(offset));
+        const qs = params.toString();
+        return `/api/friends${qs ? `?${qs}` : ''}`;
+      },
+      REQUEST: '/api/friends/request',
+      REQUESTS: (direction?: 'inbound' | 'outbound' | 'all', status?: 'pending' | 'accepted' | 'rejected' | 'blocked', limit?: number, offset?: number) => {
+        const params = new URLSearchParams();
+        if (direction) params.set('direction', direction);
+        if (status) params.set('status', status);
+        if (limit !== undefined) params.set('limit', String(limit));
+        if (offset !== undefined) params.set('offset', String(offset));
+        const qs = params.toString();
+        return `/api/friends/requests${qs ? `?${qs}` : ''}`;
+      },
+      ACCEPT: (requestId: number) => `/api/friends/request/${requestId}/accept`,
+      DECLINE: (requestId: number) => `/api/friends/request/${requestId}/decline`,
+      REMOVE: (friendUserId: number) => `/api/friends/${friendUserId}`,
     }
+
   }
 } as const;

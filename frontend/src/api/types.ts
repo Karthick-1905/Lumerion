@@ -460,3 +460,48 @@ export interface ModuleProgressResponse extends SuccessResponse {
   pathProgress: PathProgressState;
   roadmapState: Progress;
 }
+
+
+
+
+// Friends & Requests
+export interface UserSummary {
+  userId: number;
+  userName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface FriendSummary {
+  friendshipId: number;
+  connectedAt: string | null;
+  friend: UserSummary;
+}
+
+export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected' | 'blocked';
+export type FriendRequestDirection = 'inbound' | 'outbound';
+
+export interface FriendRequestListItem {
+  requestId: number;
+  status: FriendRequestStatus;
+  sentAt: string | null;
+  updatedAt: string | null;
+  message: string | null;
+  direction: FriendRequestDirection;
+  user: UserSummary;
+}
+
+export interface FriendsListResponse extends SuccessResponse {
+  data: FriendSummary[];
+  pagination: Pagination;
+}
+
+export interface FriendRequestsResponse extends SuccessResponse {
+  data: FriendRequestListItem[];
+  pagination: Pagination;
+}
+
+export interface SendFriendRequestBody {
+  targetUserId: number;
+  message?: string | null;
+}
+
