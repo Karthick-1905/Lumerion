@@ -12,17 +12,70 @@ const sessionSchema = z.object({
 type UserSession = z.infer<typeof sessionSchema>
 
 const DEFAULT_SESSION_EXPIRATION_SECONDS = 60 * 60 * 24 * 7 // 7 days
+const MAX_SESSION_EXPIRATION_SECONDS = 60 * 60 * 24 * 30 // 30 days
+
+function coercePositiveInteger(value: unknown): number | null {
+  if (typeof value !== "number") {
+    return null
+  }
+
+  if (!Number.isFinite(value)) {
+    return null
+  }
+
+  if (value <= 0) {
+    return null
+  }
+
+  return Math.floor(value)
+}
+
+function tryParseExpression(raw: string): number | null {
+  const trimmed = raw.trim()
+
+  if (!trimmed) {
+    return null
+  }
+
+  if (/^\d+$/.test(trimmed)) {
+    return coercePositiveInteger(Number(trimmed))
+  }
+
+  if (!/^[-+*/()\d\s.]+$/.test(trimmed)) {
+    return null
+  }
+
+  try {
+    // eslint-disable-next-line no-new-func
+    const evaluator = new Function(`return (${trimmed});`)
+    return coercePositiveInteger(evaluator())
+  } catch (error) {
+    console.warn("SESSION_EXPIRATION_SECONDS expression could not be evaluated", error)
+    return null
+  }
+}
 
 export function getSessionExpirationSeconds() {
   const raw = process.env.SESSION_EXPIRATION_SECONDS
+
   if (!raw) {
     return DEFAULT_SESSION_EXPIRATION_SECONDS
   }
 
-  const parsed = parseInt(raw, 10)
+  const parsed = tryParseExpression(raw)
 
-  if (Number.isNaN(parsed) || parsed <= 0) {
+  if (parsed === null) {
+    console.warn(
+      `SESSION_EXPIRATION_SECONDS is invalid (value: "${raw}"). Falling back to default of ${DEFAULT_SESSION_EXPIRATION_SECONDS} seconds.`
+    )
     return DEFAULT_SESSION_EXPIRATION_SECONDS
+  }
+
+  if (parsed > MAX_SESSION_EXPIRATION_SECONDS) {
+    console.warn(
+      `SESSION_EXPIRATION_SECONDS exceeds maximum of ${MAX_SESSION_EXPIRATION_SECONDS} seconds. Capping to maximum.`
+    )
+    return MAX_SESSION_EXPIRATION_SECONDS
   }
 
   return parsed

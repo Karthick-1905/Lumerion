@@ -5,8 +5,8 @@ import { toast } from 'react-toastify';
 
 export default function Login() {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'jskarthick399@gmail.com',
+    password: 'Kar@0710',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);

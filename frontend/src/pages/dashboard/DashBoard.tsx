@@ -123,7 +123,7 @@ const Dashboard = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white">Welcome back{profile?.userName ? `, ${profile.userName.split(' ')[0]}` : ''}.</h1>
-              <p className="text-gray-400 text-sm">Track your progress, explore new paths, and keep learning.</p>
+              {/* <p className="text-gray-400 text-sm">Track your progress, explore new paths, and keep learning.</p> */}
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -234,12 +234,12 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="mb-12">
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2 className="text-3xl font-bold text-white mb-4">
               Explore Public Roadmaps
             </h2>
-            <p className="text-gray-400 mb-6">
+            {/* <p className="text-gray-400 mb-6">
               Discover and join community-created learning paths
-            </p>
+            </p> */}
 
             {publicLoading && (
               <div className="flex items-center justify-center py-12">
@@ -345,9 +345,9 @@ const Dashboard = () => {
             <h1 className="text-4xl font-bold text-white mb-2">
               My Learning Paths
             </h1>
-            <p className="text-gray-400">
+            {/* <p className="text-gray-400">
               Continue your learning journey
-            </p>
+            </p> */}
           </div>
 
           {isLoading && (
