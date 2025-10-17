@@ -7,7 +7,7 @@
   "scripts": {
     "clean": "rm -rf build",
     "build": "npm run clean && tsc",
-    "start" : "node dist/server.js",
+    "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "db:push": "npx drizzle-kit push",
     "db:pull": "npx drizzle-kit pull",
@@ -22,6 +22,7 @@
     "@langchain/langgraph": "^0.4.9",
     "@langchain/langgraph-checkpoint-postgres": "^0.1.2",
     "@langchain/tavily": "^0.1.5",
+    "@notionhq/client": "^5.2.0",
     "@types/cookie-parser": "^1.4.9",
     "@types/nodemailer": "^7.0.1",
     "@types/swagger-ui-express": "^4.1.8",

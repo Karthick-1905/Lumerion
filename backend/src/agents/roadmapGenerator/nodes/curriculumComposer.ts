@@ -290,6 +290,7 @@ const mapModule = (module: CurriculumComposerRawOutput["modules"][number]): Road
 		title: module.title,
 		description: module.description,
 		lessons,
+		notes: null,
 	};
 };
 
@@ -401,6 +402,7 @@ const integratePrerequisitePlan = (
 		title: "On-Ramp: Prerequisite Foundations",
 		description: buildDescriptionWithPlan("Fast-track the essential foundations before tackling the core journey.", plan),
 		lessons: plan.steps.map(createLessonFromStep),
+		notes: null,
 	};
 
 	return [planModule, ...modulesCopy];

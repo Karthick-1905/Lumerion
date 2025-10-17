@@ -55,6 +55,8 @@ export const mergeModulesWithOriginal = (
     };
 
     return rawModules.map((module) => {
+        const moduleKey = normaliseKey(module.title);
+        const sourceModule = moduleMap.get(moduleKey);
         const lessons = module.lessons.map((lesson) => {
             const sourceLesson = findLesson(module.title, lesson.title);
 
@@ -79,6 +81,7 @@ export const mergeModulesWithOriginal = (
             title: module.title,
             description: module.description,
             lessons,
+            notes: sourceModule?.notes ?? null,
         } satisfies RoadmapModule;
     });
 };

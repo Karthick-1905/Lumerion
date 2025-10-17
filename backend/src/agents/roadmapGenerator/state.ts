@@ -11,10 +11,21 @@ export interface RoadmapLesson {
 	masteryCheck?: string | null;
 }
 
+export interface ModuleNoteContent {
+	pageId: string;
+	title?: string | null;
+	url?: string | null;
+	lastEditedTime?: string | null;
+	fetchedAt: string;
+	blocks: Array<Record<string, any>>;
+	metadata?: Record<string, unknown>;
+}
+
 export interface RoadmapModule {
 	title: string;
 	description: string;
 	lessons: RoadmapLesson[];
+	notes?: ModuleNoteContent | null;
 }
 
 export interface LearnerProfileMetrics {

@@ -6,6 +6,7 @@ import {
 	contextBootstrapNode,
 	curriculumComposerNode,
 	prerequisiteResolverNode,
+	moduleNotesNode,
 } from "./chain";
 import { reflectionNode, quizGenerationNode, quizPersistenceNode } from "./chain";
 import { v4 as uuidv4 } from "uuid";
@@ -15,13 +16,15 @@ const graphBuilder = new StateGraph(RoadmapStateAnnotation)
 	.addNode("context_bootstrap", contextBootstrapNode)
 	.addNode("prerequisite_resolver", prerequisiteResolverNode)
 	.addNode("curriculum_composer", curriculumComposerNode)
+	.addNode("module_notes", moduleNotesNode)
 	.addNode("reflection_node", reflectionNode)
 	.addNode("quiz_generation", quizGenerationNode)
 	.addNode("quiz_persistence", quizPersistenceNode)
 	.addEdge(START, "context_bootstrap")
 	.addEdge("context_bootstrap", "prerequisite_resolver")
 	.addEdge("prerequisite_resolver", "curriculum_composer")
-	.addEdge("curriculum_composer", "reflection_node")
+	.addEdge("curriculum_composer", "module_notes")
+	.addEdge("module_notes", "reflection_node")
 	.addEdge("reflection_node", "quiz_generation")
 	.addEdge("quiz_generation", "quiz_persistence")
 	.addEdge("quiz_persistence", END);
