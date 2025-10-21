@@ -3,8 +3,8 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "node",
-    "outDir": "dist",
-    "rootDir": "src",
+  "outDir": "dist",
+  "rootDir": ".",
   "allowJs": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -12,6 +12,7 @@
     "strict": false,
     "resolveJsonModule": true,
     "types": [
+      "jest",
       "node"
     ],
     "sourceMap": true,
@@ -26,6 +27,6 @@
     "swc": false,
     "esm": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
