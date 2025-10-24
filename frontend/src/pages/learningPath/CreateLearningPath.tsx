@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../../components/ui/Sidebar';
 import { useGenerateRoadmap, useSaveRoadmap } from '../../hooks/useRoadmaps';
 import type { GenerateRoadmapResponse } from '../../api/types';
 
@@ -91,14 +91,14 @@ const CreateLearningPath = () => {
   );
 
   return (
-    <div className="flex h-screen bg-[#1E1E1E] overflow-hidden">
+    <div className="flex h-screen bg-primary overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <div className="px-8 pt-6 pb-10">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Create a Learning Path</h1>
-              <p className="text-gray-400 text-sm max-w-2xl">
+              <h1 className="text-3xl font-bold text-primary mb-1">Create a Learning Path</h1>
+              <p className="text-secondary text-sm max-w-2xl">
                 Generate a personalized roadmap based on your topic. Review the prerequisites and modules, then save to add it to your dashboard.
               </p>
             </div>

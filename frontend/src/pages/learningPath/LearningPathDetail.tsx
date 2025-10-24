@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../../components/ui/Sidebar';
 import { useLearningPathDetail, useUpdateModuleProgress } from '../../hooks/useLearningPath';
 import { useStudyGroupsByPath } from '../../hooks/useStudyGroups';
 import CreateStudyGroupDialog from '../../components/studyGroups/CreateStudyGroupDialog';
@@ -195,15 +195,15 @@ const LearningPathDetail = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#1E1E1E] overflow-hidden">
+    <div className="flex h-screen bg-primary overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
         {isLoading && (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-[#7FDBCA] border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-gray-400">Loading learning path...</p>
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-secondary">Loading learning path...</p>
             </div>
           </div>
         )}
@@ -215,12 +215,12 @@ const LearningPathDetail = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-red-400 font-medium mb-1">Failed to load learning path</p>
-              <p className="text-gray-400 text-sm">
+              <p className="text-secondary text-sm">
                 {error?.response?.message || error?.message || 'Please try again later'}
               </p>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="mt-4 px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="mt-4 px-6 py-2 bg-secondary text-primary rounded-lg hover:bg-secondary/80 transition-colors"
               >
                 Back to Dashboard
               </button>
@@ -232,7 +232,7 @@ const LearningPathDetail = () => {
           <div className="p-8">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors group"
+              className="flex items-center gap-2 text-secondary hover:text-primary mb-6 transition-colors group"
             >
               <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -243,10 +243,10 @@ const LearningPathDetail = () => {
             <div className="mb-8">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-4">
                 <div className="flex-1">
-                  <h1 className="text-4xl font-bold text-white mb-3">
+                  <h1 className="text-4xl font-bold text-primary mb-3">
                     {learningPath.query}
                   </h1>
-                  <p className="text-gray-400 text-lg mb-4">
+                  <p className="text-secondary text-lg mb-4">
                     {learningPath.goal}
                   </p>
                   <div className="flex flex-wrap gap-3 mb-4">
@@ -273,13 +273,13 @@ const LearningPathDetail = () => {
                       learningPath.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1 bg-gray-800 text-gray-300 text-sm rounded-lg border border-gray-700"
+                          className="px-3 py-1 bg-secondary text-primary text-sm rounded-lg border border-border"
                         >
                           #{tag}
                         </span>
                       ))
                     ) : (
-                      <span className="px-3 py-1 bg-gray-800 text-gray-400 text-sm rounded-lg border border-gray-700">
+                      <span className="px-3 py-1 bg-secondary text-secondary text-sm rounded-lg border border-border">
                         No tags provided
                       </span>
                     )}
@@ -311,14 +311,14 @@ const LearningPathDetail = () => {
                 </div>
               </div>
 
-              <div className="bg-[#242424] border border-gray-800 rounded-2xl p-6">
+              <div className="bg-secondary border border-border rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-gray-400 text-sm font-medium">Overall Progress</span>
-                  <span className="text-[#7FDBCA] font-bold text-lg">{calculateOverallProgress()}%</span>
+                  <span className="text-secondary text-sm font-medium">Overall Progress</span>
+                  <span className="text-accent font-bold text-lg">{calculateOverallProgress()}%</span>
                 </div>
-                <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-primary rounded-full h-3 overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] rounded-full transition-all duration-500"
+                    className="h-full bg-accent rounded-full transition-all duration-500"
                     style={{ width: `${calculateOverallProgress()}%` }}
                   />
                 </div>
@@ -330,13 +330,13 @@ const LearningPathDetail = () => {
               <div className="mb-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Prerequisite Plan</h2>
-                    <p className="text-gray-400 text-sm max-w-2xl">
+                    <h2 className="text-2xl font-bold text-primary">Prerequisite Plan</h2>
+                    <p className="text-secondary text-sm max-w-2xl">
                       {prereqPlan.summary}
                     </p>
                   </div>
-                  <div className="bg-[#242424] border border-gray-800 rounded-xl p-4 text-sm text-gray-300 max-w-md">
-                    <h3 className="text-white font-semibold mb-2">Refresher Advice</h3>
+                  <div className="bg-secondary border border-border rounded-xl p-4 text-sm text-primary max-w-md">
+                    <h3 className="text-primary font-semibold mb-2">Refresher Advice</h3>
                     {prereqPlan.refresherAdvice && prereqPlan.refresherAdvice.length > 0 ? (
                       <ul className="list-disc list-inside space-y-1 text-gray-400">
                         {prereqPlan.refresherAdvice.map((item, index) => (
@@ -393,8 +393,8 @@ const LearningPathDetail = () => {
             )}
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Learning Roadmap</h2>
-              <p className="text-gray-400">Follow the path to master {learningPath.query}</p>
+              <h2 className="text-2xl font-bold text-primary mb-2">Learning Roadmap</h2>
+              <p className="text-secondary">Follow the path to master {learningPath.query}</p>
             </div>
 
             <div className="relative">
@@ -428,13 +428,13 @@ const LearningPathDetail = () => {
                         )}
                       </div>
 
-                      <div className="bg-[#242424] border border-gray-800 rounded-2xl p-6 hover:border-[#7FDBCA]/50 transition-all duration-300 group">
+                      <div className="bg-secondary border border-border rounded-2xl p-6 hover:border-accent/50 transition-all duration-300 group">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#7FDBCA] transition-colors">
+                            <h3 className="text-xl font-bold text-primary mb-2 group-hover:text-accent transition-colors">
                               {module.title}
                             </h3>
-                            <p className="text-gray-400 text-sm mb-3">
+                            <p className="text-secondary text-sm mb-3">
                               {module.description}
                             </p>
                             <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -478,22 +478,22 @@ const LearningPathDetail = () => {
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-2">
                             <div>
-                              <span className="text-xs text-gray-500 font-medium block">Module Progress</span>
-                              <span className="text-sm text-gray-300">{moduleStatus}</span>
+                              <span className="text-xs text-secondary font-medium block">Module Progress</span>
+                              <span className="text-sm text-primary">{moduleStatus}</span>
                             </div>
-                            <span className="text-xs text-[#7FDBCA] font-bold">{moduleCompletionPercent}%</span>
+                            <span className="text-xs text-accent font-bold">{moduleCompletionPercent}%</span>
                           </div>
-                          <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                          <div className="w-full bg-primary rounded-full h-2 overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] rounded-full transition-all duration-500"
+                              className="h-full bg-accent rounded-full transition-all duration-500"
                               style={{ width: `${moduleCompletionPercent}%` }}
                             />
                           </div>
                         </div>
 
                         {moduleDependencies.length > 0 && (
-                          <div className="mb-4 bg-[#1E1E1E] border border-gray-800 rounded-xl p-4">
-                            <div className="text-xs font-semibold text-gray-300 mb-2">Dependencies</div>
+                          <div className="mb-4 bg-primary border border-border rounded-xl p-4">
+                            <div className="text-xs font-semibold text-secondary mb-2">Dependencies</div>
                             <div className="space-y-2">
                               {moduleDependencies.map(dependency => {
                                 const prerequisiteTitles = dependency.prerequisiteModuleIds.map(id => moduleTitleMap.get(id) ?? `Module ${id}`);
@@ -535,18 +535,18 @@ const LearningPathDetail = () => {
                                 key={lessonIndex}
                                 className={`p-4 rounded-xl border transition-all duration-200 ${
                                   lessonIsCompleted
-                                    ? 'bg-[#7FDBCA]/5 border-[#7FDBCA]/20'
-                                    : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                                    ? 'bg-accent/5 border-accent/20'
+                                    : 'bg-primary/50 border-border hover:border-accent/60'
                                 }`}
                               >
                               <div className="flex items-start gap-3">
                                 <button
                                   type="button"
                                   onClick={() => handleLessonToggle(module, lessonIndex)}
-                                  className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#7FDBCA] ${
+                                  className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent ${
                                     lessonIsCompleted
-                                      ? 'bg-[#7FDBCA] border-[#7FDBCA] text-white shadow-lg shadow-[#7FDBCA]/30'
-                                      : 'border-gray-600 text-gray-400 hover:border-[#7FDBCA] hover:text-[#7FDBCA]'
+                                      ? 'bg-accent border-accent text-primary shadow-lg shadow-accent/30'
+                                      : 'border-border text-secondary hover:border-accent hover:text-accent'
                                   }`}
                                 >
                                   {lessonIsCompleted ? (
@@ -558,10 +558,10 @@ const LearningPathDetail = () => {
                                   )}
                                 </button>
                                 <div className="flex-1 min-w-0">
-                                  <h4 className={`font-medium mb-1 ${lessonIsCompleted ? 'text-[#7FDBCA]' : 'text-white'}`}>
+                                  <h4 className={`font-medium mb-1 ${lessonIsCompleted ? 'text-accent' : 'text-primary'}`}>
                                     {lesson.title}
                                   </h4>
-                                  <p className="text-sm text-gray-400 mb-2">
+                                  <p className="text-sm text-secondary mb-2">
                                     {lesson.description}
                                   </p>
                                   <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -577,12 +577,12 @@ const LearningPathDetail = () => {
                                   )}
                                   {lesson.recommendedResources && lesson.recommendedResources.length > 0 && (
                                     <div className="mt-2">
-                                      <div className="text-xs font-semibold text-gray-400 mb-1">Recommended Resources</div>
+                                      <div className="text-xs font-semibold text-secondary mb-1">Recommended Resources</div>
                                       <div className="flex flex-wrap gap-2">
                                         {lesson.recommendedResources.map((resource, resourceIndex) => (
                                           <span
                                             key={`${lessonIndex}-resource-${resourceIndex}`}
-                                            className="px-3 py-1 bg-gray-800 text-gray-300 text-xs rounded-lg border border-gray-700"
+                                            className="px-3 py-1 bg-secondary text-primary text-xs rounded-lg border border-border"
                                           >
                                             {resource}
                                           </span>

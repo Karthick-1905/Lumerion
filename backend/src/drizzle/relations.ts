@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, studyGroupMembership, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens, friendRequest, userFriend } from "./schema";                                                                                                                                                                                                                                                
+import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens, friendRequest, userFriend, studyGroupMembership, roadmapSession, userQuizAnswer, quizQuestion, quiz } from "./schema";
 
 export const moduleDependencyRelations = relations(moduleDependency, ({one}) => ({
 	learningModule: one(learningModule, {
@@ -14,6 +14,7 @@ export const learningModuleRelations = relations(learningModule, ({many}) => ({
 	learningPathModules: many(learningPathModule),
 	userModuleProgresses: many(userModuleProgress),
 	studyNotes: many(studyNote),
+	quizzes: many(quiz),
 }));
 
 export const oauthAccountsRelations = relations(oauthAccounts, ({one}) => ({
@@ -29,7 +30,6 @@ export const usersRelations = relations(users, ({many}) => ({
 	learningPaths: many(learningPath),
 	userModuleProgresses: many(userModuleProgress),
 	studyGroups: many(studyGroup),
-	studyGroupMemberships: many(studyGroupMembership),
 	studyNotes_userId: many(studyNote, {
 		relationName: "studyNote_userId_users_userId"
 	}),
@@ -54,6 +54,9 @@ export const usersRelations = relations(users, ({many}) => ({
 	userFriends_friendUserId: many(userFriend, {
 		relationName: "userFriend_friendUserId_users_userId"
 	}),
+	studyGroupMemberships: many(studyGroupMembership),
+	roadmapSessions: many(roadmapSession),
+	userQuizAnswers: many(userQuizAnswer),
 }));
 
 export const userEmailVerificationRelations = relations(userEmailVerification, ({one}) => ({
@@ -70,6 +73,8 @@ export const learningPathRelations = relations(learningPath, ({one, many}) => ({
 	}),
 	learningPathModules: many(learningPathModule),
 	userModuleProgresses: many(userModuleProgress),
+	studyGroups: many(studyGroup),
+	quizzes: many(quiz),
 }));
 
 export const moduleCitationRelations = relations(moduleCitation, ({one}) => ({
@@ -122,19 +127,8 @@ export const studyGroupRelations = relations(studyGroup, ({one, many}) => ({
 		fields: [studyGroup.pathId],
 		references: [learningPath.pathId]
 	}),
-	studyGroupMemberships: many(studyGroupMembership),
 	studyNotes: many(studyNote),
-}));
-
-export const studyGroupMembershipRelations = relations(studyGroupMembership, ({one}) => ({
-	studyGroup: one(studyGroup, {
-		fields: [studyGroupMembership.groupId],
-		references: [studyGroup.groupId]
-	}),
-	user: one(users, {
-		fields: [studyGroupMembership.userId],
-		references: [users.userId]
-	}),
+	studyGroupMemberships: many(studyGroupMembership),
 }));
 
 export const metaInteractionGroupRelations = relations(metaInteractionGroup, ({one, many}) => ({
@@ -260,4 +254,53 @@ export const userFriendRelations = relations(userFriend, ({one}) => ({
 		references: [users.userId],
 		relationName: "userFriend_friendUserId_users_userId"
 	}),
+}));
+
+export const studyGroupMembershipRelations = relations(studyGroupMembership, ({one}) => ({
+	studyGroup: one(studyGroup, {
+		fields: [studyGroupMembership.groupId],
+		references: [studyGroup.groupId]
+	}),
+	user: one(users, {
+		fields: [studyGroupMembership.userId],
+		references: [users.userId]
+	}),
+}));
+
+export const roadmapSessionRelations = relations(roadmapSession, ({one}) => ({
+	user: one(users, {
+		fields: [roadmapSession.userId],
+		references: [users.userId]
+	}),
+}));
+
+export const userQuizAnswerRelations = relations(userQuizAnswer, ({one}) => ({
+	user: one(users, {
+		fields: [userQuizAnswer.userId],
+		references: [users.userId]
+	}),
+	quizQuestion: one(quizQuestion, {
+		fields: [userQuizAnswer.questionId],
+		references: [quizQuestion.questionId]
+	}),
+}));
+
+export const quizQuestionRelations = relations(quizQuestion, ({one, many}) => ({
+	userQuizAnswers: many(userQuizAnswer),
+	quiz: one(quiz, {
+		fields: [quizQuestion.quizId],
+		references: [quiz.quizId]
+	}),
+}));
+
+export const quizRelations = relations(quiz, ({one, many}) => ({
+	learningModule: one(learningModule, {
+		fields: [quiz.moduleId],
+		references: [learningModule.moduleId]
+	}),
+	learningPath: one(learningPath, {
+		fields: [quiz.pathId],
+		references: [learningPath.pathId]
+	}),
+	quizQuestions: many(quizQuestion),
 }));

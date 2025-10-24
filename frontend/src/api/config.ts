@@ -8,7 +8,8 @@ export const API_CONFIG = {
       VERIFY_EMAIL: '/api/auth/verify-email',
       RESEND_OTP: '/api/auth/resend-otp',
       FORGOT_PASSWORD: '/api/auth/forgot-password',
-      RESET_PASSWORD: '/api/auth/reset-password'
+      RESET_PASSWORD: '/api/auth/reset-password',
+      LOGOUT: '/api/auth/logout'
     },
     LEARNING_PATHS: {
       GET_ALL: '/api/user/learning-paths',
@@ -23,12 +24,25 @@ export const API_CONFIG = {
       GET_MY_GROUPS: '/api/study-groups/me',
       CREATE: (pathId: number) => `/api/study-groups/learning-paths/${pathId}`,
       ADD_MEMBER: (groupId: number) => `/api/study-groups/${groupId}/members`,
-      MEMBER_DETAIL: (groupId: number, userId: number) => `/api/study-groups/${groupId}/members/${userId}`
+      MEMBER_DETAIL: (groupId: number, userId: number) => `/api/study-groups/${groupId}/members/${userId}`,
+      RESPOND_TO_INVITATION: (groupId: number) => `/api/study-groups/${groupId}/members/respond`
     },
     USER: {
       GET_PROFILE: '/api/user/profile',
-      SEARCH: (term: string) => `/api/user/search?term=${encodeURIComponent(term)}`,
-      NOTIFICATIONS: '/api/user/notifications'
+      SEARCH: (term: string, limit?: number, offset?: number) => {
+        const params = new URLSearchParams();
+        params.set('term', term);
+        if (limit !== undefined) params.set('limit', String(limit));
+        if (offset !== undefined) params.set('offset', String(offset));
+        return `/api/user/search?${params.toString()}`;
+      },
+      NOTIFICATIONS: '/api/user/notifications',
+      SKILL_ASSESSMENTS: {
+        GET_ALL: '/api/user/skill-assessments',
+        GET_BY_ID: (assessmentId: number) => `/api/user/skill-assessments/${assessmentId}`,
+        SUBMIT: (assessmentId: number) => `/api/user/skill-assessments/${assessmentId}/submit`
+      },
+      ACTIVITY_FEED: '/api/user/activity-feed'
     },
     ROADMAPS: {
       GET_PUBLIC: '/api/roadmap/public',

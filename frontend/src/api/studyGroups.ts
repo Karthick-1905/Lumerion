@@ -66,6 +66,14 @@ export const studyGroupsApi = {
     );
   },
 
+  // Respond to a study group invitation
+  respondToInvitation: async (groupId: number, decision: 'accept' | 'decline'): Promise<SuccessResponse> => {
+    return apiClient.post<SuccessResponse>(
+      API_CONFIG.ENDPOINTS.STUDY_GROUPS.RESPOND_TO_INVITATION(groupId),
+      { decision }
+    );
+  },
+
   // Get all user's study groups
   getMyGroups: async (): Promise<UserStudyGroupsResponse> => {
     return apiClient.get<UserStudyGroupsResponse>(

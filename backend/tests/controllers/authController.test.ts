@@ -145,6 +145,97 @@ describe("registerController", () => {
       expect.objectContaining({ success: true }),
     );
   });
+
+  it("returns 500 when user creation fails", async () => {
+    const req = createMockRequest({
+      body: { user_name: "Jane", user_email: "jane@example.com", user_password: "secret" },
+    });
+    const res = getMockedResponse();
+
+    resolveMock(mockDb.query.users.findFirst, null);
+    enqueueInsertOperation({ returning: [] }); // Simulate insert failure
+
+    await registerController(req as Request, res as Response);
+
+    expectStatus(res, StatusCodes.INTERNAL_SERVER_ERROR);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: "Error While creating user" }),
+    );
+    expect(asMock(mockDb.insert)).toHaveBeenCalledWith(users);
+  });
+
+  it("handles database exception during user insert", async () => {
+    const req = createMockRequest({
+      body: { user_name: "Jane", user_email: "jane@example.com", user_password: "secret" },
+    });
+    const res = getMockedResponse();
+
+    resolveMock(mockDb.query.users.findFirst, null);
+    asMock(mockDb.insert).mockImplementationOnce(() => {
+      throw new Error("Database connection failed");
+    });
+
+    await registerController(req as Request, res as Response);
+
+    expectStatus(res, StatusCodes.INTERNAL_SERVER_ERROR);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Internal server error" }),
+    );
+  });
+
+  it("handles database exception during OTP insert", async () => {
+    const req = createMockRequest({
+      body: { user_name: "Jane", user_email: "jane@example.com", user_password: "secret" },
+    });
+    const res = getMockedResponse();
+
+    resolveMock(mockDb.query.users.findFirst, null);
+    enqueueInsertOperation({ returning: [{ id: 21, userName: "Jane" }] });
+    asMock(mockDb.insert).mockImplementationOnce(() => {
+      throw new Error("OTP insert failed");
+    });
+
+    await registerController(req as Request, res as Response);
+
+    expectStatus(res, StatusCodes.INTERNAL_SERVER_ERROR);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Internal server error" }),
+    );
+  });
+
+
+  it("creates user with special characters in name", async () => {
+    const req = createMockRequest({
+      body: { user_name: "Jäne D'oe", user_email: "jane@example.com", user_password: "secret" },
+    });
+    const res = getMockedResponse();
+
+    resolveMock(mockDb.query.users.findFirst, null);
+    enqueueInsertOperation({ returning: [{ id: 21, userName: "Jäne D'oe" }] });
+
+    await registerController(req as Request, res as Response);
+
+    expect(asMock(mockDb.insert)).toHaveBeenCalledWith(users);
+    expect(asMock(sendOtpEmailMock)).toHaveBeenCalledWith("jane@example.com", "123456", "Jäne D'oe");
+    expectStatus(res, StatusCodes.CREATED);
+  });
+
+  it("creates user with long email", async () => {
+    const longEmail = "a".repeat(200) + "@example.com";
+    const req = createMockRequest({
+      body: { user_name: "Jane", user_email: longEmail, user_password: "secret" },
+    });
+    const res = getMockedResponse();
+
+    resolveMock(mockDb.query.users.findFirst, null);
+    enqueueInsertOperation({ returning: [{ id: 21, userName: "Jane" }] });
+
+    await registerController(req as Request, res as Response);
+
+    expect(asMock(mockDb.insert)).toHaveBeenCalledWith(users);
+    expect(asMock(sendOtpEmailMock)).toHaveBeenCalledWith(longEmail, "123456", "Jane");
+    expectStatus(res, StatusCodes.CREATED);
+  });
 });
 
 describe("loginController", () => {

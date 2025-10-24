@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../../components/ui/Sidebar';
 import { useMyStudyGroups } from '../../hooks/useStudyGroups';
 import type { UserStudyGroup } from '../../api/types';
 

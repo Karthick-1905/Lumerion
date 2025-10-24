@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getLearningPath, getLearningPaths, getUserNotifications, getUserProfile, searchUsersByName, updateLearningPath, updateModuleProgress, getModuleQuizzes, submitModuleQuizAnswers } from "../controller/userController";
+import { getLearningPath, getLearningPaths, getUserNotifications, getUserProfile, searchUsersByName, updateLearningPath, updateModuleProgress, getModuleQuizzes, submitModuleQuizAnswers, getSkillAssessments, getSkillAssessment, submitSkillAssessment, getActivityFeed } from "../controller/userController";
 
 const userRouter = Router();
 
@@ -15,6 +15,12 @@ userRouter.post("/learning-paths/:pathId/modules/:moduleId/quizzes/answers", sub
 // TODO : Implement Human in loop 
 userRouter.patch("/learning-paths/:pathId", updateLearningPath);
 
+
+userRouter.get("/skill-assessments", getSkillAssessments);
+userRouter.get("/skill-assessments/:assessmentId", getSkillAssessment);
+userRouter.post("/skill-assessments/:assessmentId/submit", submitSkillAssessment);
+
+userRouter.get("/activity-feed", getActivityFeed);
 
 export default userRouter;
 

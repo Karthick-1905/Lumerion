@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useResetPasswordMutation } from '../../hooks/useAuth';
+import { toast } from 'react-toastify';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -10,19 +12,19 @@ export default function ResetPassword() {
   });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [token, setToken] = useState<string | null>(null);
+  const { mutate: resetPassword, isPending } = useResetPasswordMutation();
 
-//   useEffect(() => {
-//     const tokenParam = searchParams.get('token');
-//     if (!tokenParam) {
-//       // Redirect to login if no token found
-//       navigate('/auth/login');
-//       return;
-//     }
-//     setToken(tokenParam);
-//   }, [searchParams, navigate]);
+  useEffect(() => {
+    const tokenParam = searchParams.get('token');
+    if (!tokenParam) {
+      toast.error('Invalid reset link. Please request a new password reset.');
+      navigate('/auth/login');
+      return;
+    }
+    setToken(tokenParam);
+  }, [searchParams, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,24 +52,23 @@ export default function ResetPassword() {
     e.preventDefault();
     
     if (!validatePasswords()) return;
-
-    setIsLoading(true);
-    try {
-      // Add your reset password API call here
-      console.log('Resetting password with token:', token);
-      console.log('New password:', formData.newPassword);
-      
-      // Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to login with success message
-      navigate('/auth/login?reset=success');
-    } catch (error) {
-      console.error('Failed to reset password:', error);
-      setError('Failed to reset password. Please try again.');
-    } finally {
-      setIsLoading(false);
+    if (!token) {
+      setError('Invalid reset token');
+      return;
     }
+
+    resetPassword(
+      {
+        token,
+        new_password: formData.newPassword
+      },
+      {
+        onError: (err: any) => {
+          const message = err?.response?.message || err?.message || 'Failed to reset password';
+          setError(message);
+        },
+      }
+    );
   };
 
 //   if (!token) {
@@ -81,13 +82,13 @@ export default function ResetPassword() {
 //   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1E1E1E]">
-      <div className="flex w-full max-w-6xl shadow-2xl bg-[#1E1E1E]">
+    <div className="min-h-screen flex items-center justify-center bg-primary">
+      <div className="flex w-full max-w-6xl shadow-2xl bg-primary">
         {/* Left: Form */}
         <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
           <div className="flex flex-col mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">Reset Your Password</h2>
-            <p className="text-gray-300">
+            <h2 className="text-3xl font-bold text-primary mb-2">Reset Your Password</h2>
+            <p className="text-secondary">
               Enter your new password below to complete the reset process.
             </p>
           </div>
@@ -107,13 +108,13 @@ export default function ResetPassword() {
                 placeholder="New Password"
                 value={formData.newPassword}
                 onChange={handleInputChange}
-                className="w-full rounded-lg border border-gray-600 bg-[#242424] px-4 py-2.5 text-white placeholder-gray-400 focus:border-[#FF5757] focus:outline-none hover:border-gray-500 transition-colors pr-12"
+                className="input-field pr-12"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary"
               >
                 {!showNewPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,13 +137,13 @@ export default function ResetPassword() {
                 placeholder="Confirm New Password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className="w-full rounded-lg border border-gray-600 bg-[#242424] px-4 py-2.5 text-white placeholder-gray-400 focus:border-[#FF5757] focus:outline-none hover:border-gray-500 transition-colors pr-12"
+                className="input-field pr-12"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary"
               >
                 {!showConfirmPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +159,7 @@ export default function ResetPassword() {
             </div>
 
             {/* Password requirements */}
-            <div className="mb-6 text-xs text-gray-400">
+            <div className="mb-6 text-xs text-secondary">
               <p>Password requirements:</p>
               <ul className="list-disc list-inside mt-1 space-y-1">
                 <li className={formData.newPassword.length >= 8 ? 'text-green-400' : ''}>
@@ -172,10 +173,10 @@ export default function ResetPassword() {
 
             <button
               type="submit"
-              disabled={isLoading || !formData.newPassword || !formData.confirmPassword}
-              className="w-full bg-[#FF5757] hover:bg-[#FF6B6B] disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200"
+              disabled={isPending || !formData.newPassword || !formData.confirmPassword}
+              className="w-full bg-accent hover:bg-accent/90 disabled:bg-secondary disabled:cursor-not-allowed text-primary font-medium py-2.5 px-4 rounded-lg transition-all duration-200"
             >
-              {isLoading ? (
+              {isPending ? (
                 <div className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -191,8 +192,8 @@ export default function ResetPassword() {
 
           {/* Back to login */}
           <div className="mt-6 text-center">
-            <span className="text-gray-300">Remember your password? </span>
-            <a href="/auth/login" className="text-[#FF5757] hover:text-[#FF7B7B] underline transition-colors">
+            <span className="text-secondary">Remember your password? </span>
+            <a href="/auth/login" className="text-accent hover:text-accent/90 underline transition-colors">
               Back to Login
             </a>
           </div>

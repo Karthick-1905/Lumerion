@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const userTypes = [
   'Student',
@@ -85,19 +85,19 @@ export default function ProfileSetup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] p-4">
-      <div className="w-full max-w-4xl bg-[#1E1E1E] rounded-2xl shadow-2xl border border-gray-700/50 backdrop-blur-sm">
+    <div className="min-h-screen flex items-center justify-center bg-primary p-4">
+      <div className="w-full max-w-4xl bg-primary rounded-2xl shadow-2xl border border-border backdrop-blur-sm">
         <div className="p-8 md:p-12">
           <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold text-white mb-2">Complete Your Profile</h2>
-            <p className="text-gray-300">Help us recommend the best learning path for you!</p>
+            <h2 className="text-3xl font-bold text-primary mb-2">Complete Your Profile</h2>
+            <p className="text-secondary">Help us recommend the best learning path for you!</p>
           </div>
 
           {/* Progress Stepper */}
           <div className="flex items-center justify-start mb-6 gap-2">
             {[1,2,3,4].map(s => (
               <div key={s} className={`w-16 h-2 rounded-full transition-all duration-300 ${
-                step === s ? 'bg-[#FF5757]' : step > s ? 'bg-green-500' : 'bg-gray-700'
+                step === s ? 'bg-accent' : step > s ? 'bg-green-500' : 'bg-border'
               }`}></div>
             ))}
           </div>
@@ -107,7 +107,7 @@ export default function ProfileSetup() {
             {/* Step 1: LMS Use */}
             {step === 1 && (
               <div className="mb-8">
-                <label className="block text-white font-medium mb-6 text-xl text-center">What do you use the LMS for?</label>
+                <label className="block text-primary font-medium mb-6 text-xl text-center">What do you use the LMS for?</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {lmsUses.map(use => (
                     <button
@@ -116,15 +116,15 @@ export default function ProfileSetup() {
                       onClick={() => handleAutoTransition('lmsUse', use)}
                       className={`group relative w-full py-4 px-6 rounded-xl border-2 transition-all duration-300 font-medium text-left overflow-hidden ${
                         form.lmsUse === use 
-                          ? 'bg-[#FF5757] text-white border-[#FF5757] shadow-lg shadow-[#FF5757]/30 scale-105' 
-                          : 'bg-[#242424] text-gray-300 border-gray-600 hover:border-[#FF5757] hover:bg-[#2A2A2A] hover:scale-102'
+                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30 scale-105' 
+                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90 hover:scale-102'
                       }`}
                     >
                       <div className="relative z-10">
                         {use}
                       </div>
                       {form.lmsUse === use && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#FF5757] to-[#FF6B6B] opacity-20"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 opacity-20"></div>
                       )}
                     </button>
                   ))}
@@ -135,7 +135,7 @@ export default function ProfileSetup() {
             {/* Step 2: User Type */}
             {step === 2 && (
               <div className="mb-8">
-                <label className="block text-white font-medium mb-6 text-xl text-center">What best describes you?</label>
+                <label className="block text-primary font-medium mb-6 text-xl text-center">What best describes you?</label>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {userTypes.map(type => (
                     <button
@@ -144,15 +144,15 @@ export default function ProfileSetup() {
                       onClick={() => handleAutoTransition('userType', type)}
                       className={`group relative w-full py-4 px-6 rounded-xl border-2 transition-all duration-300 font-medium text-center overflow-hidden ${
                         form.userType === type 
-                          ? 'bg-[#FF5757] text-white border-[#FF5757] shadow-lg shadow-[#FF5757]/30 scale-105' 
-                          : 'bg-[#242424] text-gray-300 border-gray-600 hover:border-[#FF5757] hover:bg-[#2A2A2A] hover:scale-102'
+                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30 scale-105' 
+                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90 hover:scale-102'
                       }`}
                     >
                       <div className="relative z-10">
                         {type}
                       </div>
                       {form.userType === type && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#FF5757] to-[#FF6B6B] opacity-20"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 opacity-20"></div>
                       )}
                     </button>
                   ))}
@@ -163,7 +163,7 @@ export default function ProfileSetup() {
             {/* Step 3: Study Style */}
             {step === 3 && (
               <div className="mb-8">
-                <label className="block text-white font-medium mb-6 text-xl text-center">Preferred study style?</label>
+                <label className="block text-primary font-medium mb-6 text-xl text-center">Preferred study style?</label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {studyStyles.map(style => (
                     <button
@@ -172,15 +172,15 @@ export default function ProfileSetup() {
                       onClick={() => handleAutoTransition('studyStyle', style)}
                       className={`group relative w-full py-6 px-6 rounded-xl border-2 transition-all duration-300 font-medium text-center overflow-hidden ${
                         form.studyStyle === style 
-                          ? 'bg-[#FF5757] text-white border-[#FF5757] shadow-lg shadow-[#FF5757]/30 scale-105' 
-                          : 'bg-[#242424] text-gray-300 border-gray-600 hover:border-[#FF5757] hover:bg-[#2A2A2A] hover:scale-102'
+                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30 scale-105' 
+                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90 hover:scale-102'
                       }`}
                     >
                       <div className="relative z-10">
                         {style}
                       </div>
                       {form.studyStyle === style && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#FF5757] to-[#FF6B6B] opacity-20"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 opacity-20"></div>
                       )}
                     </button>
                   ))}
@@ -191,8 +191,8 @@ export default function ProfileSetup() {
             {/* Step 4: Interests */}
             {step === 4 && (
               <div className="mb-8">
-                <label className="block text-white font-medium mb-6 text-xl text-center">Your interest fields</label>
-                <p className="text-gray-400 text-center mb-6">Select all that apply</p>
+                <label className="block text-primary font-medium mb-6 text-xl text-center">Your interest fields</label>
+                <p className="text-secondary text-center mb-6">Select all that apply</p>
                 <div className="flex flex-wrap justify-center gap-3 mb-6">
                   {interestFields.map(field => (
                     <button
@@ -201,8 +201,8 @@ export default function ProfileSetup() {
                       onClick={() => handleInterestChange(field)}
                       className={`px-6 py-3 rounded-full border-2 transition-all duration-300 font-medium text-sm hover:scale-105 ${
                         form.interests.includes(field) 
-                          ? 'bg-[#FF5757] text-white border-[#FF5757] shadow-lg shadow-[#FF5757]/30' 
-                          : 'bg-[#242424] text-gray-300 border-gray-600 hover:border-[#FF5757] hover:bg-[#2A2A2A]'
+                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30' 
+                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90'
                       }`}
                     >
                       {field}
@@ -215,7 +215,7 @@ export default function ProfileSetup() {
                     placeholder="Please specify your other interest..."
                     value={form.otherInterest}
                     onChange={e => handleChange('otherInterest', e.target.value)}
-                    className="w-full rounded-xl border-2 border-gray-600 bg-[#242424] px-6 py-3 text-white placeholder-gray-400 focus:border-[#FF5757] focus:outline-none hover:border-gray-500 transition-all duration-300 shadow-inner"
+                    className="w-full rounded-xl border-2 border-border bg-secondary px-6 py-3 text-primary placeholder-secondary focus:border-accent focus:outline-none hover:border-accent/50 transition-all duration-300 shadow-inner"
                   />
                 )}
               </div>
@@ -228,7 +228,7 @@ export default function ProfileSetup() {
               type="button"
               onClick={() => setStep(prev => Math.max(1, prev - 1))}
               disabled={step === 1}
-              className="px-8 py-3 rounded-xl bg-gray-700 text-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-600 transition-all duration-300 flex items-center gap-2"
+              className="px-8 py-3 rounded-xl bg-secondary text-secondary font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-secondary/90 transition-all duration-300 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -236,7 +236,7 @@ export default function ProfileSetup() {
               Back
             </button>
             
-            <div className="text-gray-400 text-sm">
+            <div className="text-secondary text-sm">
               Step {step} of 4
             </div>
 
@@ -249,7 +249,7 @@ export default function ProfileSetup() {
                   (step === 2 && !form.userType) ||
                   (step === 3 && !form.studyStyle)
                 }
-                className="px-8 py-3 rounded-xl bg-[#FF5757] text-white font-medium disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-[#FF6B6B] transition-all duration-300 flex items-center gap-2 shadow-lg shadow-[#FF5757]/30"
+                className="px-8 py-3 rounded-xl bg-accent text-primary font-medium disabled:bg-secondary disabled:cursor-not-allowed hover:bg-accent/90 transition-all duration-300 flex items-center gap-2 shadow-lg shadow-accent/30"
               >
                 Next
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,7 +261,7 @@ export default function ProfileSetup() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={form.interests.length === 0 || isLoading}
-                className="px-8 py-3 rounded-xl bg-green-600 text-white font-medium disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-green-700 transition-all duration-300 flex items-center gap-2 shadow-lg shadow-green-600/30"
+                className="px-8 py-3 rounded-xl bg-green-600 text-white font-medium disabled:bg-secondary disabled:cursor-not-allowed hover:bg-green-700 transition-all duration-300 flex items-center gap-2 shadow-lg shadow-green-600/30"
               >
                 {isLoading ? (
                   <>

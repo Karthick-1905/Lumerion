@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useForgotPasswordMutation } from '../../hooks/useAuth';
+import { toast } from 'react-toastify';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -9,24 +11,28 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { mutate: forgotPassword } = useForgotPasswordMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setIsLoading(true);
-    try {
-      // Add your forgot password API call here
-      console.log('Sending reset link to:', email);
-      // Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setIsSubmitted(true);
-    } catch (error) {
-      console.error('Failed to send reset link:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    forgotPassword(
+      { user_email: email },
+      {
+        onSuccess: () => {
+          setIsSubmitted(true);
+        },
+        onError: (error: any) => {
+          const message = error?.response?.message || error?.message || 'Failed to send reset link';
+          toast.error(message);
+        },
+        onSettled: () => {
+          setIsLoading(false);
+        },
+      }
+    );
   };
 
   const handleClose = () => {

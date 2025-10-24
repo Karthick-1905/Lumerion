@@ -61,4 +61,11 @@ export const authApi = {
       resetData
     );
   },
+
+  // Logout
+  logout: async (): Promise<SuccessResponse> => {
+    return apiClient.post<SuccessResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.LOGOUT
+    );
+  },
 };

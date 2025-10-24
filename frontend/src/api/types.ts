@@ -424,6 +424,69 @@ export interface UserMetrics {
   totalLearningPaths: number;
   totalModules: number;
   completedModules: number;
+  currentStreak: number;
+  longestStreak: number;
+  achievements: Achievement[];
+  progressData: ProgressDataPoint[];
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+}
+
+export interface ProgressDataPoint {
+  date: string;
+  completedModules: number;
+}
+
+export interface SkillAssessment {
+  assessmentId: number;
+  title: string;
+  description: string | null;
+  topic: string;
+  difficultyLevel: string;
+  estimatedDuration: number | null;
+  createdAt: string | null;
+  isCompleted: boolean;
+  result: SkillAssessmentResult | null;
+}
+
+export interface SkillAssessmentResult {
+  score: string | null;
+  percentage: string | null;
+  skillLevel: string | null;
+  completedAt: string | null;
+}
+
+export interface SkillAssessmentDetail {
+  assessmentId: number;
+  title: string;
+  description: string | null;
+  topic: string;
+  difficultyLevel: string;
+  estimatedDuration: number | null;
+  questions: SkillAssessmentQuestion[];
+  isCompleted: boolean;
+  result: SkillAssessmentResult | null;
+}
+
+export interface SkillAssessmentQuestion {
+  questionId: number;
+  prompt: string;
+  type: string | null;
+  choices: any;
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
 }
 
 export interface UserProfileResponse extends SuccessResponse {
@@ -503,5 +566,30 @@ export interface FriendRequestsResponse extends SuccessResponse {
 export interface SendFriendRequestBody {
   targetUserId: number;
   message?: string | null;
+}
+
+// Activity Feed Types
+export interface ActivityUser {
+  id: number;
+  name: string;
+  avatar: string | null;
+}
+
+export interface ActivityTarget {
+  id: number | null;
+  type: string | null;
+}
+
+export interface ActivityItem {
+  id: number;
+  type: string;
+  user: ActivityUser;
+  target: ActivityTarget;
+  metadata: Record<string, any> | null;
+  createdAt: string;
+}
+
+export interface ActivityFeedResponse extends SuccessResponse {
+  activities: ActivityItem[];
 }
 

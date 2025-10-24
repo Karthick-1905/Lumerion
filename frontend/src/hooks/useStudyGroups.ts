@@ -53,7 +53,7 @@ export const useStudyGroupMembers = (groupId: number) => {
 export const useMyStudyGroups = () => {
   return useQuery<UserStudyGroupsResponse, ApiError>({
     queryKey: STUDY_GROUPS_QUERY_KEYS.myGroups(),
-    queryFn: studyGroupsApi.getMyGroups,
+    queryFn: () => studyGroupsApi.getMyGroups(),
   });
 };
 
@@ -117,22 +117,23 @@ export const useUpdateStudyGroupMember = (groupId?: number) => {
   });
 };
 
-export const useRemoveStudyGroupMember = (groupId?: number) => {
+export const useRespondToStudyGroupInvitation = (groupId?: number) => {
   const queryClient = useQueryClient();
 
-  return useMutation<SuccessResponse, ApiError, number>({
-    mutationFn: userId => {
-      if (!groupId || Number.isNaN(groupId) || !userId || Number.isNaN(userId)) {
-        const error = new Error('Invalid study group member identifier') as ApiError;
+  return useMutation<SuccessResponse, ApiError, 'accept' | 'decline'>({
+    mutationFn: (decision) => {
+      if (!groupId || Number.isNaN(groupId)) {
+        const error = new Error('Invalid study group identifier') as ApiError;
         error.status = 400;
         throw error;
       }
-      return studyGroupsApi.removeMember(groupId, userId);
+      return studyGroupsApi.respondToInvitation(groupId, decision);
     },
     onSuccess: () => {
       if (!groupId || Number.isNaN(groupId)) return;
       queryClient.invalidateQueries({ queryKey: STUDY_GROUPS_QUERY_KEYS.members(groupId) });
       queryClient.invalidateQueries({ queryKey: STUDY_GROUPS_QUERY_KEYS.detail(groupId) });
+      queryClient.invalidateQueries({ queryKey: STUDY_GROUPS_QUERY_KEYS.myGroups() });
     },
   });
 };

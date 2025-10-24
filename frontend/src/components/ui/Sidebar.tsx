@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useUserProfile } from '../hooks/useUserProfile';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { useLogoutMutation } from '../../hooks/useAuth';
 
 interface NavItem {
   name: string;
@@ -11,6 +12,7 @@ interface NavItem {
 export default function Sidebar() {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { mutate: logout, isPending: isLoggingOut } = useLogoutMutation();
 
   const { data: userData } = useUserProfile();
   const profile = userData?.profile;
@@ -42,6 +44,15 @@ export default function Sidebar() {
       ),
     },
     {
+      name: 'Skill Assessments',
+      path: '/skill-assessments',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    {
       name: 'Friends',
       path: '/friends',
       icon: (
@@ -60,6 +71,15 @@ export default function Sidebar() {
       ),
     },
     {
+      name: 'Activity Feed',
+      path: '/activity-feed',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+    },
+    {
       name: 'Profile',
       path: '/profile',
       icon: (
@@ -74,12 +94,12 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`h-screen bg-[#1E1E1E] border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out ${
+      className={`h-screen sidebar-bg flex flex-col transition-all duration-300 ease-in-out ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
       {/* Header */}
-      <div className="p-6 flex items-center justify-between border-b border-gray-800">
+      <div className="p-6 flex items-center justify-between border-b border-primary bg-primary/80 backdrop-blur-sm">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] rounded-lg flex items-center justify-center">
@@ -88,24 +108,26 @@ export default function Sidebar() {
               </svg>
             </div>
             <div>
-              <h1 className="text-white font-bold text-sm">LMS</h1>
-              <p className="text-gray-400 text-xs">Learning Hub</p>
+              <h1 className="text-primary font-bold text-sm">LMS</h1>
+              <p className="text-tertiary text-xs">Learning Hub</p>
             </div>
           </div>
         )}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-all duration-200"
-        >
-          <svg
-            className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="w-11 h-11 rounded-xl border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-primary hover:border-accent transition-all duration-200"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-          </svg>
-        </button>
+            <svg
+              className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -116,8 +138,8 @@ export default function Sidebar() {
             to={item.path}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
               isActive(item.path)
-                ? 'bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white shadow-lg shadow-[#7FDBCA]/20'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                ? 'bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white shadow-lg shadow-accent'
+                : 'text-tertiary hover:bg-hover hover:text-primary'
             }`}
           >
             <span
@@ -138,10 +160,10 @@ export default function Sidebar() {
       </nav>
 
       {/* User Profile Section */}
-      <div className="p-4 border-t border-gray-800">
+      <div className="p-4 border-t border-primary space-y-2">
         <Link
           to="/profile"
-          className={`flex items-center gap-3 p-3 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all duration-200 ${
+          className={`flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-tertiary transition-all duration-200 ${
             isCollapsed ? 'justify-center' : ''
           }`}
         >
@@ -149,7 +171,7 @@ export default function Sidebar() {
             <img
               src={profile.avatarPublicUrl}
               alt={profile.userName}
-              className="w-10 h-10 rounded-full object-cover border border-[#7FDBCA]/30"
+              className="w-10 h-10 rounded-full object-cover border border-accent/30"
             />
           ) : (
             <div className="w-10 h-10 bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -158,13 +180,13 @@ export default function Sidebar() {
           )}
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium text-sm truncate">{profile?.userName ?? 'Your Name'}</p>
-              <p className="text-gray-400 text-xs truncate">{profile?.userEmail ?? 'your.email@example.com'}</p>
+              <p className="text-primary font-medium text-sm truncate">{profile?.userName ?? 'Your Name'}</p>
+              <p className="text-tertiary text-xs truncate">{profile?.userEmail ?? 'your.email@example.com'}</p>
             </div>
           )}
           {!isCollapsed && (
             <svg
-              className="w-5 h-5 text-gray-400"
+              className="w-5 h-5 text-tertiary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -173,6 +195,24 @@ export default function Sidebar() {
             </svg>
           )}
         </Link>
+
+        {/* Logout Button */}
+        <button
+          onClick={() => logout()}
+          disabled={isLoggingOut}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-tertiary hover:bg-red-900/20 hover:text-red-400 transition-all duration-200 ${
+            isCollapsed ? 'justify-center' : ''
+          } ${isLoggingOut ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          {!isCollapsed && (
+            <span className="font-medium text-sm">
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
+            </span>
+          )}
+        </button>
       </div>
     </aside>
   );

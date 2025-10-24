@@ -146,3 +146,22 @@ export const useResetPasswordMutation = () => {
     },
   });
 };
+
+// Logout Mutation
+export const useLogoutMutation = () => {
+  const navigate = useNavigate();
+
+  return useMutation<SuccessResponse, ApiError, void>({
+    mutationKey: ['auth', 'logout'],
+    mutationFn: () => authApi.logout(),
+    onSuccess: () => {
+      // Navigate to login page
+      navigate('/login');
+    },
+    onError: (error) => {
+      console.error('Logout failed:', error);
+      // Still navigate to login even if logout fails on server
+      navigate('/login');
+    },
+  });
+};

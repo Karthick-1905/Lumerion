@@ -1,7 +1,5 @@
 import {QueryClientProvider, QueryClient} from '@tanstack/react-query'
 import {createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider} from 'react-router-dom'
-import { ToastContainer } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
 import Register from './pages/auth/Register'
 import Login from './pages/auth/Login'
 import VerifyEmail from './pages/auth/VerifyEmail'
@@ -16,6 +14,11 @@ import StudyGroupDetail from './pages/studyGroups/StudyGroupDetail'
 import MyStudyGroups from './pages/studyGroups/MyStudyGroups'
 import Profile from './pages/profile/Profile'
 import FriendsPage from './pages/friends/Friends'
+import Notifications from './pages/notifications/Notifications'
+import SkillAssessments from './pages/skillAssessment/SkillAssessments'
+import SkillAssessment from './pages/skillAssessment/SkillAssessment'
+import ActivityFeed from './pages/activityFeed/ActivityFeed'
+import ToastContainer from './components/ui/ToastContainer'
 
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path='/' element={<MainLayout/>}>
@@ -32,6 +35,10 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route path='/study-groups/:groupId' element={<StudyGroupDetail/>}/>
       <Route path='/friends' element={<FriendsPage/>}/>
       <Route path='/profile' element={<Profile/>}/>
+      <Route path='/notifications' element={<Notifications/>}/>
+      <Route path='/skill-assessments' element={<SkillAssessments/>}/>
+      <Route path='/skill-assessments/:assessmentId' element={<SkillAssessment/>}/>
+      <Route path='/activity-feed' element={<ActivityFeed/>}/>
       <Route path='*' element={<Navigate to='/login' replace/>}/>
   </Route>
 ))
@@ -40,7 +47,7 @@ const queryclient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
     },
     mutations: {
       retry: 1,
@@ -51,18 +58,7 @@ function App() {
   return (
     <QueryClientProvider client={queryclient}>
       <RouterProvider  router={router}/>
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-      />
+      <ToastContainer />
     </QueryClientProvider>
   )
 }

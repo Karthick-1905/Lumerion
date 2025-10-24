@@ -1,12 +1,47 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../../components/ui/Sidebar';
 import { useStudyGroupsByPath } from '../../hooks/useStudyGroups';
+import { useMemo, useState } from 'react';
 import type { StudyGroupSummary } from '../../api/types';
 
 const StudyGroupsList = () => {
   const { pathId } = useParams<{ pathId: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useStudyGroupsByPath(Number(pathId));
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private' | 'restricted'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'members' | 'name'>('newest');
+
+  // Filter and sort study groups
+  const filteredAndSortedGroups = useMemo(() => {
+    if (!data?.data) return [];
+
+    let filtered = data.data.filter(group => {
+      const matchesSearch = searchTerm === '' ||
+        group.groupName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesVisibility = visibilityFilter === 'all' || group.visibility === visibilityFilter;
+      return matchesSearch && matchesVisibility;
+    });
+
+    // Sort the filtered results
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'members':
+          return b.memberCount - a.memberCount;
+        case 'name':
+          return a.groupName.localeCompare(b.groupName);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [data?.data, searchTerm, visibilityFilter, sortBy]);
 
   const getVisibilityBadge = (visibility: string) => {
     switch (visibility) {
@@ -35,14 +70,14 @@ const StudyGroupsList = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#1E1E1E] overflow-hidden">
+    <div className="flex h-screen bg-primary overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors group"
+            className="flex items-center gap-2 text-secondary hover:text-primary mb-6 transition-colors group"
           >
             <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -51,13 +86,54 @@ const StudyGroupsList = () => {
           </button>
 
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">
+            <h1 className="text-4xl font-bold text-primary mb-2">
               Study Groups
             </h1>
-            <p className="text-gray-400">
+            <p className="text-secondary">
               Join or create study groups for this learning path
             </p>
           </div>
+
+          {!isLoading && !isError && data?.data && data.data.length > 0 && (
+            <div className="mb-6 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search study groups..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 pl-10 bg-[#242424] border border-gray-800 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#7FDBCA]/60 transition-colors"
+                  />
+                  <svg className="w-5 h-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={visibilityFilter}
+                    onChange={(e) => setVisibilityFilter(e.target.value as typeof visibilityFilter)}
+                    className="px-4 py-3 bg-[#242424] border border-gray-800 rounded-xl text-gray-200 focus:outline-none focus:border-[#7FDBCA]/60 transition-colors"
+                  >
+                    <option value="all">All Visibility</option>
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                    <option value="restricted">Restricted</option>
+                  </select>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="px-4 py-3 bg-[#242424] border border-gray-800 rounded-xl text-gray-200 focus:outline-none focus:border-[#7FDBCA]/60 transition-colors"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="members">Most Members</option>
+                    <option value="name">Name A-Z</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isLoading && (
             <div className="flex items-center justify-center py-20">
@@ -97,7 +173,7 @@ const StudyGroupsList = () => {
             <>
               <div className="flex items-center justify-between mb-6">
                 <div className="text-gray-400">
-                  <span className="font-medium text-white">{data.pagination.total}</span> study group{data.pagination.total !== 1 ? 's' : ''} found
+                  <span className="font-medium text-white">{filteredAndSortedGroups.length}</span> of <span className="font-medium text-white">{data.pagination.total}</span> study group{data.pagination.total !== 1 ? 's' : ''} {searchTerm || visibilityFilter !== 'all' ? 'found' : 'available'}
                 </div>
                 <button className="px-6 py-3 bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#7FDBCA]/20 transition-all duration-200 flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,8 +183,17 @@ const StudyGroupsList = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {data.data.map((group: StudyGroupSummary) => (
+              {filteredAndSortedGroups.length === 0 ? (
+                <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-8 text-center">
+                  <svg className="w-12 h-12 text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <p className="text-gray-400 text-sm">No study groups match your filters</p>
+                  <p className="text-gray-500 text-xs mt-1">Try adjusting your search or filter criteria</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredAndSortedGroups.map((group: StudyGroupSummary) => (
                   <div
                     key={group.groupId}
                     onClick={() => handleGroupClick(group.groupId)}
@@ -150,6 +235,7 @@ const StudyGroupsList = () => {
                   </div>
                 ))}
               </div>
+              )}
             </>
           )}
         </div>
