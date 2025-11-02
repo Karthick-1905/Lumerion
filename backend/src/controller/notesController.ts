@@ -1,18 +1,20 @@
 // src/controllers/noteController.ts
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
+import { promises as fs } from "fs";
+import path from "path";
 import * as noteService from "../utils/notesUtil"
 import * as mediaService from "../config/minio";
+import { client as redisClient } from "../utils/redisClient";
+import type { File as MulterFile } from "multer";
 
-type UploadedFile = {
-  buffer: Buffer;
-  originalname: string;
-  mimetype: string;
-  size: number;
-};
-
+type UploadedFile = MulterFile & { path: string };
 type MulterRequest = Request & { file?: UploadedFile };
 
+const MEDIA_CACHE_PREFIX = "note:media";
+const MEDIA_CACHE_TTL_SECONDS = Number(process.env.MEDIA_CACHE_TTL ?? 60 * 60);
+
 export async function uploadMediaHandler(req: Request, res: Response) {
+  let absoluteFilePath: string | undefined;
   try {
     const { noteId: noteIdParam } = req.params;
     const noteId = Number(noteIdParam);
@@ -25,21 +27,51 @@ export async function uploadMediaHandler(req: Request, res: Response) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
+    if (!file.path) {
+      return res.status(500).json({ error: "Uploaded file missing path" });
+    }
+
     const userId = Number(req.user_id);
     if (!Number.isInteger(userId)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    absoluteFilePath = path.resolve(file.path);
+    let fileBuffer: Buffer;
+
+    try {
+      fileBuffer = await fs.readFile(absoluteFilePath);
+    } catch (readError) {
+      console.error("Failed to read uploaded file", readError);
+      return res.status(500).json({ error: "Unable to process uploaded file" });
+    }
+
     const result = await mediaService.uploadMedia({
       noteId,
-      buffer: file.buffer,
+      buffer: fileBuffer,
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
       userId,
     });
 
-    res.json({
+    const cacheKey = `${MEDIA_CACHE_PREFIX}:${noteId}:${result.mediaId}`;
+
+    const cachePayload = {
+      ...result,
+      noteId,
+      cachedAt: new Date().toISOString(),
+      // Stored as base64 to safely transport binary data if needed downstream.
+      base64: fileBuffer.toString("base64"),
+    } as const;
+
+    redisClient
+      .set(cacheKey, JSON.stringify(cachePayload), "EX", MEDIA_CACHE_TTL_SECONDS)
+      .catch((cacheError) => {
+        console.warn("Unable to cache media payload", cacheError);
+      });
+
+    return res.json({
       mediaId: result.mediaId,
       url: result.url,
       type: result.type,
@@ -48,6 +80,12 @@ export async function uploadMediaHandler(req: Request, res: Response) {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal error" });
+  } finally {
+    if (absoluteFilePath) {
+      fs.unlink(absoluteFilePath).catch((unlinkError) => {
+        console.warn("Failed to clean up temp upload", unlinkError);
+      });
+    }
   }
 }
 

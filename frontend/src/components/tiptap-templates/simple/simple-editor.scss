@@ -97,9 +97,23 @@ body,
   white-space: nowrap;
 }
 
+.simple-editor-status--saving {
+  opacity: 0.85;
+}
+
+.simple-editor-status--queued {
+  color: var(--tt-theme-text);
+  opacity: 0.9;
+}
+
+.simple-editor-status--error {
+  color: #f87171;
+  opacity: 1;
+  font-weight: 600;
+}
+
 .simple-editor-content {
-  max-width: 648px;
-  width: 100%;
+  width: 60%;
   margin: 0 auto;
   height: 100%;
   display: flex;

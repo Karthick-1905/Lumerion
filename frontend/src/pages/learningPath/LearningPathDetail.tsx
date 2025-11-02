@@ -1,16 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Sidebar from '../../components/ui/Sidebar';
-import { useLearningPathDetail, useUpdateModuleProgress } from '../../hooks/useLearningPath';
+import {
+  useLearningPathDetail,
+  useUpdateModuleProgress,
+  useLearningPathProgress,
+} from '../../hooks/useLearningPath';
 import { useStudyGroupsByPath } from '../../hooks/useStudyGroups';
 import CreateStudyGroupDialog from '../../components/studyGroups/CreateStudyGroupDialog';
+import QuizModal from './QuizModal';
+import { getDifficultyClasses } from '../../components/dashboard/dashboardUtils';
 import type {
   Module,
   Lesson,
   ModuleProgressStatus,
   UpdateModuleProgressPayload,
   ApiError,
+  LearningPathModuleProgress,
+  QuizSubmissionResponse,
 } from '../../api/types';
 
 const LearningPathDetail = () => {
@@ -20,13 +28,25 @@ const LearningPathDetail = () => {
   const { data, isLoading, isError, error } = useLearningPathDetail(pathIdNumber);
   const updateModuleProgress = useUpdateModuleProgress(pathIdNumber);
   const { data: studyGroupsData, isLoading: studyGroupsLoading } = useStudyGroupsByPath(pathIdNumber);
+  const { data: latestProgress } = useLearningPathProgress(pathIdNumber);
   const learningPath = data?.learningPath;
   const progress = learningPath?.progress;
   const prereqPlan = progress?.prerequisitePlan;
   const dependencies = progress?.dependencies ?? [];
 
+  const moduleProgressMap = useMemo(() => {
+    const map = new Map<number, LearningPathModuleProgress>();
+    if (latestProgress?.moduleProgress) {
+      latestProgress.moduleProgress.forEach((entry) => {
+        map.set(entry.moduleId, entry);
+      });
+    }
+    return map;
+  }, [latestProgress?.moduleProgress]);
+
   const [lessonCompletionState, setLessonCompletionState] = useState<Record<number, boolean[]>>({});
   const [isCreateStudyGroupOpen, setIsCreateStudyGroupOpen] = useState(false);
+  const [quizModule, setQuizModule] = useState<Module | null>(null);
 
   useEffect(() => {
     if (!learningPath?.modules) {
@@ -38,6 +58,12 @@ const LearningPathDetail = () => {
       const nextState: Record<number, boolean[]> = {};
 
       learningPath.modules.forEach(module => {
+        const progressState = moduleProgressMap.get(module.moduleId);
+        if (progressState?.status === 'completed') {
+          nextState[module.moduleId] = module.lessons.map(() => true);
+          return;
+        }
+
         const existing = prev[module.moduleId];
         if (existing && existing.length === module.lessons.length) {
           nextState[module.moduleId] = existing;
@@ -48,13 +74,19 @@ const LearningPathDetail = () => {
 
       return nextState;
     });
-  }, [learningPath?.modules]);
+  }, [learningPath?.modules, moduleProgressMap]);
 
   const getLessonCompletion = (module: Module, lessonIndex: number) => {
     const state = lessonCompletionState[module.moduleId];
     if (state && state.length === module.lessons.length) {
       return state[lessonIndex] ?? false;
     }
+
+    const progressState = moduleProgressMap.get(module.moduleId);
+    if (progressState?.status === 'completed') {
+      return true;
+    }
+
     return module.lessons[lessonIndex]?.completed ?? false;
   };
 
@@ -115,22 +147,37 @@ const LearningPathDetail = () => {
     }
   };
 
+  const handleOpenQuiz = (module: Module) => {
+    if (module.isLocked) {
+      toast.info('Unlock this module to access its quiz.');
+      return;
+    }
+
+    setQuizModule(module);
+  };
+
+  const handleQuizCompleted = (result: QuizSubmissionResponse) => {
+    if (!result.passed || !learningPath?.modules) {
+      return;
+    }
+
+    const completedModule = learningPath.modules.find(
+      (item) => item.moduleId === result.moduleId
+    );
+
+    if (!completedModule) {
+      return;
+    }
+
+    setLessonCompletionState((prev) => ({
+      ...prev,
+      [completedModule.moduleId]: completedModule.lessons.map(() => true),
+    }));
+  };
+
   const moduleTitleMap = new Map(
     learningPath?.modules?.map(module => [module.moduleId, module.title]) ?? []
   );
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return 'bg-green-500/10 text-green-400 border-green-500/20';
-      case 'medium':
-        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'hard':
-        return 'bg-red-500/10 text-red-400 border-red-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-    }
-  };
 
   const calculateModuleProgress = (module: Module) => {
     const state = lessonCompletionState[module.moduleId];
@@ -138,6 +185,14 @@ const LearningPathDetail = () => {
       const completedLessons = state.filter(Boolean).length;
       const totalLessons = state.length;
       return totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
+    }
+
+    const progressState = moduleProgressMap.get(module.moduleId);
+    if (progressState) {
+      const numericProgress = Number(progressState.completionPercent);
+      if (!Number.isNaN(numericProgress)) {
+        return Math.max(0, Math.min(100, Math.round(numericProgress)));
+      }
     }
 
     if (!module.lessons || module.lessons.length === 0) return 0;
@@ -229,7 +284,8 @@ const LearningPathDetail = () => {
         )}
 
         {!isLoading && !isError && learningPath && (
-          <div className="p-8">
+          <>
+            <div className="p-8">
             <button
               onClick={() => navigate('/dashboard')}
               className="flex items-center gap-2 text-secondary hover:text-primary mb-6 transition-colors group"
@@ -250,7 +306,7 @@ const LearningPathDetail = () => {
                     {learningPath.goal}
                   </p>
                   <div className="flex flex-wrap gap-3 mb-4">
-                    <span className={`px-4 py-2 rounded-xl text-sm font-medium border ${getDifficultyColor(learningPath.difficulty)}`}>
+                    <span className={`px-4 py-2 rounded-xl text-sm font-medium border ${getDifficultyClasses(learningPath.difficulty)}`}>
                       {learningPath.difficulty}
                     </span>
                     <span className="px-4 py-2 rounded-xl text-sm font-medium bg-[#7FDBCA]/10 text-[#7FDBCA] border border-[#7FDBCA]/20">
@@ -289,7 +345,7 @@ const LearningPathDetail = () => {
                   <button
                     type="button"
                     onClick={() => setIsCreateStudyGroupOpen(true)}
-                    className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-[#0B1F1A] text-sm font-semibold shadow-lg shadow-[#7FDBCA]/20 hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                    className="px-5 py-3 rounded-xl bg-linear-to-r from-[#7FDBCA] to-[#00CC99] text-[#0B1F1A] text-sm font-semibold shadow-lg shadow-[#7FDBCA]/20 hover:shadow-xl transition-all duration-200 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -398,7 +454,7 @@ const LearningPathDetail = () => {
             </div>
 
             <div className="relative">
-              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#7FDBCA] via-[#00CC99] to-transparent"></div>
+              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-linear-to-b from-[#7FDBCA] via-[#00CC99] to-transparent"></div>
 
               <div className="space-y-8">
                 {learningPath.modules.map((module: Module, moduleIndex: number) => {
@@ -408,13 +464,30 @@ const LearningPathDetail = () => {
                   const moduleDependencies = dependencies.filter(dep => dep.moduleId === module.moduleId);
                   const lessonStates = lessonCompletionState[module.moduleId] ?? module.lessons.map(lesson => !!lesson.completed);
                   const completedLessons = lessonStates.filter(Boolean).length;
-                  const moduleStatus = moduleCompletionPercent >= 100 ? 'Completed' : completedLessons > 0 ? 'In Progress' : 'Not Started';
+                  const progressState = moduleProgressMap.get(module.moduleId);
+                  const moduleStatus = progressState?.status === 'completed'
+                    ? 'Completed'
+                    : progressState?.status === 'in_progress'
+                      ? 'In Progress'
+                      : progressState?.status === 'not_started'
+                        ? 'Not Started'
+                        : moduleCompletionPercent >= 100
+                          ? 'Completed'
+                          : completedLessons > 0
+                            ? 'In Progress'
+                            : 'Not Started';
+                  const canStartQuiz = !module.isLocked;
+                  const quizButtonText = !canStartQuiz
+                    ? 'Locked quiz'
+                    : isCompleted
+                      ? 'Review quiz'
+                      : 'Take quiz';
 
                   return (
                     <div key={module.moduleId} className="relative pl-20">
                       <div className={`absolute left-0 w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-lg border-4 border-[#1E1E1E] transition-all duration-300 ${
                         isCompleted
-                          ? 'bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] text-white shadow-lg shadow-[#7FDBCA]/30'
+                          ? 'bg-linear-to-br from-[#7FDBCA] to-[#00CC99] text-white shadow-lg shadow-[#7FDBCA]/30'
                           : isInProgress
                           ? 'bg-[#242424] text-[#7FDBCA] border-[#7FDBCA]'
                           : 'bg-[#242424] text-gray-500 border-gray-700'
@@ -428,16 +501,29 @@ const LearningPathDetail = () => {
                         )}
                       </div>
 
-                      <div className="bg-secondary border border-border rounded-2xl p-6 hover:border-accent/50 transition-all duration-300 group">
-                        <div className="flex items-start justify-between mb-4">
+                      <div className="rounded-3xl border border-gray-400 p-6 transition-all duration-300 hover:border-[#7FDBCA]/50 hover:shadow-lg hover:shadow-[#7FDBCA]/15 group">
+                        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold text-primary mb-2 group-hover:text-accent transition-colors">
+                            <div className="mb-3 flex flex-wrap items-center gap-3">
+                              <h3 className="text-2xl font-semibold text-white group-hover:text-[#7FDBCA] transition-colors">
                               {module.title}
                             </h3>
-                            <p className="text-secondary text-sm mb-3">
+                              <span
+                                className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${
+                                  isCompleted
+                                    ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300'
+                                    : isInProgress
+                                      ? 'border-amber-400/40 bg-amber-500/10 text-amber-200'
+                                      : 'border-gray-600 bg-gray-800/80 text-gray-300'
+                                }`}
+                              >
+                                {moduleStatus}
+                              </span>
+                            </div>
+                            <p className="mb-4 text-sm leading-relaxed text-secondary">
                               {module.description}
                             </p>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400 sm:text-sm">
                               <div className="flex items-center gap-1">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -464,45 +550,71 @@ const LearningPathDetail = () => {
                               )}
                             </div>
                           </div>
-                          {module.isLocked && (
-                            <div className="ml-4">
-                              <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
-                                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="flex flex-col items-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenQuiz(module)}
+                              disabled={!canStartQuiz}
+                              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                                canStartQuiz
+                                  ? 'border-[#7FDBCA]/40 bg-[#13231d] text-[#7FDBCA] hover:border-[#7FDBCA]/60 hover:bg-[#183028]'
+                                  : 'cursor-not-allowed border-gray-800 bg-[#0b1511] text-gray-500'
+                              }`}
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6l4 2" />
+                              </svg>
+                              <span>{quizButtonText}</span>
+                            </button>
+                            {module.isLocked && (
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
+                                <span>Complete prerequisites to unlock</span>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
 
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
+                        <div className="mb-6">
+                          <div className="mb-2 flex items-center justify-between">
                             <div>
-                              <span className="text-xs text-secondary font-medium block">Module Progress</span>
-                              <span className="text-sm text-primary">{moduleStatus}</span>
+                              <span className="text-xs font-medium uppercase tracking-[0.2em] text-[#7FDBCA]/70">Module Progress</span>
+                              <span className="mt-1 block text-sm text-gray-300">{moduleStatus}</span>
                             </div>
-                            <span className="text-xs text-accent font-bold">{moduleCompletionPercent}%</span>
+                            <span className="text-sm font-semibold text-[#7FDBCA]">
+                              {moduleCompletionPercent}%
+                            </span>
                           </div>
-                          <div className="w-full bg-primary rounded-full h-2 overflow-hidden">
+                          <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#0b1511]">
                             <div
-                              className="h-full bg-accent rounded-full transition-all duration-500"
+                              className="h-full rounded-full bg-[#00cc99] transition-all duration-500"
                               style={{ width: `${moduleCompletionPercent}%` }}
                             />
+                          </div>
+                          <div className="mt-2 text-xs text-gray-500">
+                            {completedLessons} / {lessonStates.length} lessons completed
                           </div>
                         </div>
 
                         {moduleDependencies.length > 0 && (
-                          <div className="mb-4 bg-primary border border-border rounded-xl p-4">
-                            <div className="text-xs font-semibold text-secondary mb-2">Dependencies</div>
-                            <div className="space-y-2">
+                          <div className="mb-5 rounded-2xl border border-gray-800/70 bg-[#111b16] p-5">
+                            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#7FDBCA]/70">Dependencies</div>
+                            <div className="space-y-3">
                               {moduleDependencies.map(dependency => {
                                 const prerequisiteTitles = dependency.prerequisiteModuleIds.map(id => moduleTitleMap.get(id) ?? `Module ${id}`);
 
                                 return (
-                                  <div key={`${module.moduleId}-dependency-${dependency.moduleId}-${dependency.dependencyType}`} className="text-xs text-gray-400 space-y-1">
+                                  <div key={`${module.moduleId}-dependency-${dependency.moduleId}-${dependency.dependencyType}`} className="space-y-2 text-xs text-gray-300">
                                     <div className="flex items-center justify-between gap-3">
-                                      <div className="font-medium text-gray-200 capitalize">{dependency.dependencyType ?? 'Dependency'}</div>
-                                      <span className={`px-2 py-0.5 rounded-full border text-[10px] ${dependency.isOptional ? 'border-gray-700 text-gray-300' : 'border-[#7FDBCA]/40 text-[#7FDBCA]'}`}>
+                                      <div className="font-semibold capitalize text-gray-200">{dependency.dependencyType ?? 'Dependency'}</div>
+                                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${dependency.isOptional ? 'border-gray-700 text-gray-300' : 'border-[#7FDBCA]/40 text-[#7FDBCA]'}`}>
                                         {dependency.isOptional ? 'Optional' : 'Required'}
                                       </span>
                                     </div>
@@ -511,7 +623,7 @@ const LearningPathDetail = () => {
                                         {prerequisiteTitles.map(title => (
                                           <span
                                             key={`${module.moduleId}-${dependency.moduleId}-${title}`}
-                                            className="px-3 py-1 bg-gray-800/70 text-gray-200 rounded-lg border border-gray-700"
+                                            className="rounded-lg border border-gray-800/60 bg-[#141f1b] px-3 py-1 text-gray-200"
                                           >
                                             {title}
                                           </span>
@@ -533,20 +645,20 @@ const LearningPathDetail = () => {
                             return (
                               <div
                                 key={lessonIndex}
-                                className={`p-4 rounded-xl border transition-all duration-200 ${
+                                className={`rounded-2xl border transition-all duration-200 p-4 sm:p-5 ${
                                   lessonIsCompleted
-                                    ? 'bg-accent/5 border-accent/20'
-                                    : 'bg-primary/50 border-border hover:border-accent/60'
+                                    ? 'border-[#00cc99]/40'
+                                    : 'border-gray-700 hover:border-[#7FDBCA]/40'
                                 }`}
                               >
                               <div className="flex items-start gap-3">
                                 <button
                                   type="button"
                                   onClick={() => handleLessonToggle(module, lessonIndex)}
-                                  className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent ${
+                                  className={`shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#00cc99]/40 ${
                                     lessonIsCompleted
-                                      ? 'bg-accent border-accent text-primary shadow-lg shadow-accent/30'
-                                      : 'border-border text-secondary hover:border-accent hover:text-accent'
+                                      ? 'border-[#00cc99] bg-[#00cc99] text-[#0b1f1a] shadow-lg shadow-[#00cc99]/30'
+                                      : 'border-gray-700 text-secondary hover:border-[#7FDBCA] hover:text-[#7FDBCA]'
                                   }`}
                                 >
                                   {lessonIsCompleted ? (
@@ -582,7 +694,7 @@ const LearningPathDetail = () => {
                                         {lesson.recommendedResources.map((resource, resourceIndex) => (
                                           <span
                                             key={`${lessonIndex}-resource-${resourceIndex}`}
-                                            className="px-3 py-1 bg-secondary text-primary text-xs rounded-lg border border-border"
+                                            className="rounded-lg border border-gray-800/60 bg-[#175e449d] px-3 py-1 text-xs text-[#7FDBCA]"
                                           >
                                             {resource}
                                           </span>
@@ -602,7 +714,18 @@ const LearningPathDetail = () => {
                 })}
               </div>
             </div>
-          </div>
+            </div>
+            {quizModule && (
+              <QuizModal
+                open={Boolean(quizModule)}
+                pathId={learningPath.pathId}
+                moduleId={quizModule.moduleId}
+                moduleTitle={quizModule.title}
+                onClose={() => setQuizModule(null)}
+                onCompleted={handleQuizCompleted}
+              />
+            )}
+          </>
         )}
       </main>
 

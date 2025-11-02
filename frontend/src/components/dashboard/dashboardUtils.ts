@@ -1,13 +1,12 @@
-export const getDifficultyClasses = (difficulty: string) => {
-  switch (difficulty.toLowerCase()) {
+export const getDifficultyClasses = (difficulty: string | null | undefined) => {
+  const baseClass = 'bg-white/5 text-white/80 border-white/10';
+  const normalized = String(difficulty ?? '').toLowerCase();
+  switch (normalized) {
     case 'easy':
-      return 'bg-green-500/10 text-green-400 border-green-500/20';
     case 'medium':
-      return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
     case 'hard':
-      return 'bg-red-500/10 text-red-400 border-red-500/20';
     default:
-      return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+      return baseClass;
   }
 };
 

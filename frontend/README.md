@@ -21,6 +21,7 @@ A modern, responsive React SPA for ADL LMS featuring beautiful UI components, re
 - **Real-time Updates**: Live data updates for activity feeds and notifications
 - **Optimistic Updates**: Instant UI feedback for user actions
 - **Error Handling**: Graceful error states with retry mechanisms
+- **Autosave Queue**: Optimistic note editing with background retries for flaky connections
 
 ### Interactive Components
 - **Charts & Analytics**: Beautiful data visualizations using Recharts

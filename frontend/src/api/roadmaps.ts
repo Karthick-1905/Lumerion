@@ -6,6 +6,10 @@ import type {
   GenerateRoadmapResponse,
   SaveRoadmapRequest,
   SaveRoadmapResponse,
+  ModuleQuizzesResponse,
+  QuizSubmissionPayload,
+  QuizSubmissionResponse,
+  LearningPathProgressResponse,
 } from './types';
 
 // Roadmaps API Service
@@ -30,6 +34,38 @@ export const roadmapsApi = {
     return apiClient.post<SaveRoadmapResponse>(
       API_CONFIG.ENDPOINTS.ROADMAPS.SAVE,
       payload
+    );
+  },
+
+  // Fetch quizzes for a learning path module
+  getModuleQuizzes: async (
+    pathId: number,
+    moduleId: number
+  ): Promise<ModuleQuizzesResponse> => {
+    return apiClient.get<ModuleQuizzesResponse>(
+      API_CONFIG.ENDPOINTS.ROADMAPS.MODULE_QUIZZES(pathId, moduleId)
+    );
+  },
+
+  // Submit quiz responses for evaluation
+  submitQuiz: async (
+    pathId: number,
+    moduleId: number,
+    quizId: number,
+    payload: QuizSubmissionPayload
+  ): Promise<QuizSubmissionResponse> => {
+    return apiClient.post<QuizSubmissionResponse>(
+      API_CONFIG.ENDPOINTS.ROADMAPS.SUBMIT_QUIZ(pathId, moduleId, quizId),
+      payload
+    );
+  },
+
+  // Retrieve persisted progress for a learning path
+  getLearningPathProgress: async (
+    pathId: number
+  ): Promise<LearningPathProgressResponse> => {
+    return apiClient.get<LearningPathProgressResponse>(
+      API_CONFIG.ENDPOINTS.ROADMAPS.PATH_PROGRESS(pathId)
     );
   },
 };

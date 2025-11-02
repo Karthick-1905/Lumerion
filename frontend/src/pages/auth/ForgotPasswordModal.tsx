@@ -113,8 +113,8 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
             {/* Success state */}
             <div className="text-center">
               {/* Success icon */}
-              <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mx-auto mb-4 w-16 h-16 bg-white/10 border border-white/20 rounded-full flex items-center justify-center text-white/80">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               </div>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export function useDebouncedCallback<T extends (...args: any[]) => void>(
   fn: T,
-  wait = 300
+  wait = 1000
 ) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastArgsRef = useRef<Parameters<T> | null>(null);

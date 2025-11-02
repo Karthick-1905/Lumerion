@@ -103,6 +103,59 @@ export interface Module {
   isOptionalDependency: boolean;
 }
 
+export interface ModuleQuizQuestion {
+  questionId: number;
+  prompt: string;
+  questionType: string | null;
+  choices: string[];
+  explanation: string | null;
+}
+
+export interface ModuleQuiz {
+  quizId: number;
+  moduleId: number;
+  pathId: number;
+  lessonIndex: number | null;
+  title: string;
+  passingPercentage: number;
+  questionCount: number;
+  questions: ModuleQuizQuestion[];
+}
+
+export interface ModuleQuizzesResponse extends SuccessResponse {
+  quizzes: ModuleQuiz[];
+}
+
+export interface QuizSubmissionAnswer {
+  questionId: number;
+  answer: string;
+}
+
+export interface QuizSubmissionPayload {
+  answers: QuizSubmissionAnswer[];
+}
+
+export interface QuizSubmissionResultDetail {
+  questionId: number;
+  prompt: string;
+  questionType: string | null;
+  answerGiven: string | null;
+  isCorrect: boolean;
+  correctAnswer: string | null;
+}
+
+export interface QuizSubmissionResponse extends SuccessResponse {
+  pathId: number;
+  moduleId: number;
+  quizId: number;
+  totalQuestions: number;
+  correctCount: number;
+  score: number;
+  passingPercentage: number;
+  passed: boolean;
+  results: QuizSubmissionResultDetail[];
+}
+
 // Bootstrap Summary
 export interface BootstrapSummary {
   knowledgeGaps: string[];
@@ -592,6 +645,18 @@ export interface ModuleProgressResponse extends SuccessResponse {
   moduleProgress: ModuleProgressState;
   pathProgress: PathProgressState;
   roadmapState: Progress;
+}
+
+export interface LearningPathModuleProgress {
+  moduleId: number;
+  status: ModuleProgressStatus;
+  completionPercent: string;
+  lastAccessed: string | null;
+}
+
+export interface LearningPathProgressResponse extends SuccessResponse {
+  pathId: number;
+  moduleProgress: LearningPathModuleProgress[];
 }
 
 

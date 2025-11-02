@@ -66,8 +66,8 @@ const SkillAssessment = () => {
           <div className="p-8">
             <div className="max-w-2xl mx-auto">
               <div className="bg-[#242424] border border-gray-800 rounded-2xl p-8 text-center">
-                <div className="w-16 h-16 bg-green-500/20 border border-green-500/40 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-16 h-16 bg-white/10 border border-white/20 rounded-full flex items-center justify-center mx-auto mb-4 text-white/80">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
@@ -81,13 +81,13 @@ const SkillAssessment = () => {
                     </div>
                     <div>
                       <p className="text-gray-400 text-sm">Skill Level</p>
-                      <p className="text-xl font-semibold text-[#7FDBCA]">{assessment.result?.skillLevel}</p>
+                      <p className="text-xl font-semibold text-white/80">{assessment.result?.skillLevel}</p>
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => navigate('/skill-assessments')}
-                  className="bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white font-semibold py-3 px-6 rounded-xl hover:from-[#6BC9B8] hover:to-[#00B894] transition-all duration-200"
+                  className="bg-linear-to-r from-[#7FDBCA] to-[#4CB0A3] text-white font-semibold py-3 px-6 rounded-xl hover:from-[#6BC9B8] hover:to-[#459D93] transition-all duration-200"
                 >
                   Back to Assessments
                 </button>
@@ -109,7 +109,7 @@ const SkillAssessment = () => {
             {isLoading && (
               <div className="flex items-center justify-center py-20">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 border-4 border-[#7FDBCA] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-12 h-12 border-4 border-white/20 border-t-transparent rounded-full animate-spin"></div>
                   <p className="text-gray-400">Loading assessment...</p>
                 </div>
               </div>
@@ -142,7 +142,7 @@ const SkillAssessment = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-gray-400 mb-1">Question</div>
-                      <div className="text-2xl font-bold text-[#7FDBCA]">
+                      <div className="text-2xl font-bold text-white/80">
                         {currentQuestionIndex + 1} / {questions.length}
                       </div>
                     </div>
@@ -151,7 +151,7 @@ const SkillAssessment = () => {
                   {/* Progress Bar */}
                   <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
                     <div
-                      className="bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] h-2 rounded-full transition-all duration-300"
+                      className="bg-linear-to-r from-[#7FDBCA] to-[#4CB0A3] h-2 rounded-full transition-all duration-300"
                       style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
                     />
                   </div>
@@ -174,8 +174,8 @@ const SkillAssessment = () => {
                             key={index}
                             className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all duration-200 ${
                               answers[currentQuestion.questionId] === choice
-                                ? 'border-[#7FDBCA] bg-[#7FDBCA]/10'
-                                : 'border-gray-700 hover:border-gray-600'
+                                ? 'border-white/50 bg-white/10'
+                                : 'border-white/10 hover:border-white/20 hover:bg-white/5'
                             }`}
                           >
                             <input
@@ -184,7 +184,7 @@ const SkillAssessment = () => {
                               value={choice}
                               checked={answers[currentQuestion.questionId] === choice}
                               onChange={(e) => handleAnswerChange(currentQuestion.questionId, e.target.value)}
-                              className="mr-3 text-[#7FDBCA] focus:ring-[#7FDBCA]"
+                              className="mr-3 text-white/80 focus:ring-white/30"
                             />
                             <span className="text-white">{choice}</span>
                           </label>
@@ -197,7 +197,7 @@ const SkillAssessment = () => {
                         value={answers[currentQuestion.questionId] || ''}
                         onChange={(e) => handleAnswerChange(currentQuestion.questionId, e.target.value)}
                         placeholder="Enter your answer..."
-                        className="w-full p-4 bg-[#1E1E1E] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-[#7FDBCA] focus:ring-1 focus:ring-[#7FDBCA] resize-none"
+                        className="w-full p-4 bg-[#1E1E1E] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-white/30 focus:ring-1 focus:ring-white/20 resize-none"
                         rows={4}
                       />
                     )}
@@ -218,12 +218,12 @@ const SkillAssessment = () => {
                     {questions.map((_, index) => (
                       <div
                         key={index}
-                        className={`w-3 h-3 rounded-full ${
+                        className={`w-3 h-3 rounded-full transition-colors duration-200 ${
                           index === currentQuestionIndex
-                            ? 'bg-[#7FDBCA]'
+                            ? 'bg-white'
                             : isAnswered(questions[index].questionId)
-                            ? 'bg-green-500'
-                            : 'bg-gray-600'
+                            ? 'bg-white/50'
+                            : 'bg-white/15'
                         }`}
                       />
                     ))}
@@ -233,7 +233,7 @@ const SkillAssessment = () => {
                     <button
                       onClick={handleSubmit}
                       disabled={!allAnswered || submitMutation.isPending}
-                      className="px-6 py-3 bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-[#6BC9B8] hover:to-[#00B894] transition-all duration-200"
+                      className="px-6 py-3 bg-linear-to-r from-[#7FDBCA] to-[#4CB0A3] text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-[#6BC9B8] hover:to-[#459D93] transition-all duration-200"
                     >
                       {submitMutation.isPending ? 'Submitting...' : 'Submit Assessment'}
                     </button>
@@ -241,7 +241,7 @@ const SkillAssessment = () => {
                     <button
                       onClick={handleNext}
                       disabled={!isAnswered(currentQuestion?.questionId)}
-                      className="px-6 py-3 bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-[#6BC9B8] hover:to-[#00B894] transition-all duration-200"
+                      className="px-6 py-3 bg-linear-to-r from-[#7FDBCA] to-[#4CB0A3] text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-[#6BC9B8] hover:to-[#459D93] transition-all duration-200"
                     >
                       Next
                     </button>

@@ -13,7 +13,7 @@ export function useScrolling(
   target?: ScrollTarget,
   options: UseScrollingOptions = {}
 ): boolean {
-  const { debounce = 150, fallbackToDocument = true } = options
+  const { debounce = 1000, fallbackToDocument = true } = options
   const [isScrolling, setIsScrolling] = useState(false)
 
   useEffect(() => {

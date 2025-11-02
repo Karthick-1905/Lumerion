@@ -48,6 +48,8 @@ const {
   saveRoadmap,
   setLearningPathVisibility,
   listPublicRoadmaps,
+  getModuleQuizzes,
+  submitQuizAssessment,
 } = roadmapControllerModule;
 
 const asMock = (fn: unknown) => fn as jest.MockedFunction<any>;
@@ -340,6 +342,121 @@ describe("setLearningPathVisibility", () => {
 
     expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
     expect(res.payload).toMatchObject({ success: true, visibility: "public" });
+  });
+});
+
+describe("getModuleQuizzes", () => {
+  it("returns quizzes for a module", async () => {
+    const req = createMockRequest({ user_id: 10, params: { pathId: "4", moduleId: "7" } });
+    const res = createMockResponse();
+
+    mockDb.query.learningPath.findFirst.mockResolvedValueOnce({ pathId: 4, userId: 10, visibility: "private" });
+    mockDb.query.learningPathModule.findFirst.mockResolvedValueOnce({ pathModuleId: 99 });
+
+    const quizRow = {
+      quiz: {
+        quizId: 5,
+        moduleId: 7,
+        pathId: 4,
+        lessonIndex: 1,
+        title: "Module Quiz",
+        description: null,
+        assessmentType: "quiz",
+        metadata: { passingPercentage: 65 },
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      },
+      question: {
+        questionId: 11,
+        quizId: 5,
+        prompt: "What is AI?",
+        questionType: "single",
+        choices: ["ML", "DL"],
+        answer: "ML",
+        explanation: "Because",
+        metadata: {},
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    };
+
+    enqueueSelectResult([quizRow, { quiz: quizRow.quiz, question: null }]);
+
+    await getModuleQuizzes(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
+    const payload = (res as unknown as { payload: any }).payload;
+    expect(payload.success).toBe(true);
+    expect(payload.quizzes).toHaveLength(1);
+    expect(payload.quizzes[0]).toMatchObject({
+      quizId: 5,
+      pathId: 4,
+      moduleId: 7,
+      passingPercentage: 65,
+      questionCount: 1,
+    });
+    expect(payload.quizzes[0].questions[0]).toMatchObject({
+      questionId: 11,
+      choices: ["ML", "DL"],
+      prompt: "What is AI?",
+    });
+  });
+});
+
+describe("submitQuizAssessment", () => {
+  it("scores answers and records results", async () => {
+    const req = createMockRequest({
+      user_id: 10,
+      params: { pathId: "4", moduleId: "7", quizId: "5" },
+      body: { answers: [{ questionId: 11, answer: "ML" }] },
+    });
+    const res = createMockResponse();
+
+    mockDb.query.learningPath.findFirst.mockResolvedValueOnce({ pathId: 4, userId: 10 });
+
+    const quizRow = {
+      quiz: {
+        quizId: 5,
+        moduleId: 7,
+        pathId: 4,
+        lessonIndex: 1,
+        title: "Module Quiz",
+        description: null,
+        assessmentType: "quiz",
+        metadata: { passingPercentage: 60 },
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      },
+      question: {
+        questionId: 11,
+        quizId: 5,
+        prompt: "What is AI?",
+        questionType: "single",
+        choices: ["ML", "DL"],
+        answer: "ML",
+        explanation: "Because",
+        metadata: {},
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    };
+
+    enqueueSelectResult([quizRow]);
+    enqueueInsertOperation({ resolved: [] });
+    enqueueInsertOperation({ resolved: [] });
+
+    await submitQuizAssessment(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
+    const payload = (res as unknown as { payload: any }).payload;
+    expect(payload.success).toBe(true);
+    expect(payload.passed).toBe(true);
+    expect(payload.correctCount).toBe(1);
+    expect(payload.totalQuestions).toBe(1);
+    expect(payload.results[0]).toMatchObject({
+      questionId: 11,
+      isCorrect: true,
+      correctAnswer: "ML",
+    });
+    expect(mockDb.transaction).toHaveBeenCalled();
   });
 });
 

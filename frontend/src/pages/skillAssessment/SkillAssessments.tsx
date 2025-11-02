@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Sidebar from '../../components/ui/Sidebar';
 import { userApi } from '../../api/user';
+import { getDifficultyClasses } from '../../components/dashboard/dashboardUtils';
 
 const SkillAssessments = () => {
   const { data, isLoading, isError, error } = useQuery({
@@ -10,22 +11,14 @@ const SkillAssessments = () => {
 
   const assessments = data?.assessments || [];
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
-      case 'easy': return 'bg-green-500/20 text-green-300 border-green-500/40';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-      case 'hard': return 'bg-red-500/20 text-red-300 border-red-500/40';
-      default: return 'bg-gray-500/20 text-gray-300 border-gray-500/40';
-    }
-  };
-
   const getSkillLevelColor = (level: string | null) => {
     switch (level?.toLowerCase()) {
-      case 'beginner': return 'bg-gray-500/20 text-gray-300';
-      case 'intermediate': return 'bg-blue-500/20 text-blue-300';
-      case 'advanced': return 'bg-purple-500/20 text-purple-300';
-      case 'expert': return 'bg-gold-500/20 text-yellow-300';
-      default: return 'bg-gray-500/20 text-gray-300';
+      case 'beginner':
+      case 'intermediate':
+      case 'advanced':
+      case 'expert':
+      default:
+        return 'bg-white/5 text-white/80 border border-white/10';
     }
   };
 
@@ -70,7 +63,7 @@ const SkillAssessments = () => {
               {assessments.map((assessment) => (
                 <div
                   key={assessment.assessmentId}
-                  className="bg-secondary border border-border rounded-2xl p-6 hover:border-accent/40 transition-all duration-200"
+                  className="bg-white/5 border border-white/10 rounded-2xl p-6 transition-all duration-200 hover:bg-white/10 hover:border-white/20"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -80,8 +73,8 @@ const SkillAssessments = () => {
                       )}
                     </div>
                     {assessment.isCompleted && (
-                      <div className="w-8 h-8 bg-green-500/20 border border-green-500/40 rounded-full flex items-center justify-center ml-3">
-                        <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="w-8 h-8 bg-white/10 border border-white/20 rounded-full flex items-center justify-center ml-3 text-white/80">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </div>
@@ -94,7 +87,7 @@ const SkillAssessments = () => {
                   </div>
 
                   <div className="flex items-center justify-between mb-4">
-                    <span className={`px-3 py-1 text-xs font-semibold uppercase tracking-wide border rounded-lg ${getDifficultyColor(assessment.difficultyLevel)}`}>
+                    <span className={`px-3 py-1 text-xs font-semibold uppercase tracking-wide border rounded-lg ${getDifficultyClasses(assessment.difficultyLevel)}`}>
                       {assessment.difficultyLevel}
                     </span>
                     {assessment.estimatedDuration && (
@@ -121,7 +114,7 @@ const SkillAssessments = () => {
                     </div>
                   ) : (
                     <button
-                      className="w-full bg-gradient-to-r from-accent to-accent/80 text-primary font-semibold py-3 px-4 rounded-xl hover:from-accent/90 hover:to-accent/70 transition-all duration-200"
+                      className="w-full bg-linear-to-r from-accent to-accent/80 text-primary font-semibold py-3 px-4 rounded-xl hover:from-accent/90 hover:to-accent/70 transition-all duration-200"
                       onClick={() => window.location.href = `/skill-assessments/${assessment.assessmentId}`}
                     >
                       Take Assessment

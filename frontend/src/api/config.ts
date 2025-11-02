@@ -47,7 +47,12 @@ export const API_CONFIG = {
     ROADMAPS: {
       GET_PUBLIC: '/api/roadmap/public',
       GENERATE: '/api/roadmap/generate',
-      SAVE: '/api/roadmap/save'
+      SAVE: '/api/roadmap/save',
+      MODULE_QUIZZES: (pathId: number, moduleId: number) =>
+        `/api/roadmap/learning-paths/${pathId}/modules/${moduleId}/quizzes`,
+      SUBMIT_QUIZ: (pathId: number, moduleId: number, quizId: number) =>
+        `/api/roadmap/learning-paths/${pathId}/modules/${moduleId}/quizzes/${quizId}/submit`,
+      PATH_PROGRESS: (pathId: number) => `/api/roadmap/learning-paths/${pathId}/progress`
     },
     NOTES: {
       CREATE: '/api/notes',

@@ -7,16 +7,21 @@ import { z } from "zod";
 
 import { orchestratorGraph } from "../agents/orchestrator/graph";
 import { ContextBootstrapSummary, PrerequisitePlanSummary, RoadmapModule } from "../agents/roadmap/state";
+import { Quiz, QuizQuestion } from "../agents/quizzes/state";
 import { db } from "../drizzle";
 import {
     learningModule,
     learningPath,
     learningPathModule,
     moduleDependency,
+    quiz,
+    quizQuestion,
+    userModuleProgress,
+    userQuizAnswer,
     studyGroup,
     users,
 } from "../drizzle/schema";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { getSession } from "../utils/authUtils";
 import {
     PublicRoadmapListQuery,
@@ -24,6 +29,47 @@ import {
     publicRoadmapListQuerySchema,
     setLearningPathVisibilitySchema,
 } from "../schema/roadmapSchema";
+
+type QuizWithQuestions = {
+    quiz: typeof quiz.$inferSelect;
+    questions: Array<typeof quizQuestion.$inferSelect>;
+};
+
+const buildQuizFilter = (pathId: number, moduleId: number, quizId?: number) => {
+    const baseFilter = and(eq(quiz.pathId, pathId), eq(quiz.moduleId, moduleId));
+    if (typeof quizId === "number") {
+        return and(baseFilter, eq(quiz.quizId, quizId));
+    }
+    return baseFilter;
+};
+
+const loadQuizzesWithQuestions = async (
+    pathId: number,
+    moduleId: number,
+    quizId?: number,
+): Promise<QuizWithQuestions[]> => {
+    const rows = await db
+        .select({ quiz, question: quizQuestion })
+        .from(quiz)
+        .leftJoin(quizQuestion, eq(quizQuestion.quizId, quiz.quizId))
+        .where(buildQuizFilter(pathId, moduleId, quizId))
+        .orderBy(asc(quiz.quizId), asc(quizQuestion.questionId));
+
+    const quizMap = new Map<number, QuizWithQuestions>();
+
+    for (const row of rows) {
+        const quizIdValue = row.quiz.quizId;
+        if (!quizMap.has(quizIdValue)) {
+            quizMap.set(quizIdValue, { quiz: row.quiz, questions: [] });
+        }
+        const entry = quizMap.get(quizIdValue)!;
+        if (row.question) {
+            entry.questions.push(row.question);
+        }
+    }
+
+    return Array.from(quizMap.values());
+};
 
 const COOKIE_SESSION_KEY = process.env.COOKIE_SESSION_KEY ?? "session-id";
 
@@ -33,6 +79,17 @@ const saveRoadmapSchema = z.object({
     goal: z.string().optional(),
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
     tags: z.array(z.string().min(1)).optional(),
+});
+
+const quizSubmissionSchema = z.object({
+    answers: z
+        .array(
+            z.object({
+                questionId: z.number().int().positive(),
+                answer: z.string().min(1).trim(),
+            }),
+        )
+        .min(1, "At least one answer is required"),
 });
 
 export const roadmapGenerator = async (req: Request, res: Response) => {
@@ -117,6 +174,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     }
 
     let modules: RoadmapModule[] = [];
+    let quizzes: Quiz[] = [];
     let domain: string | null = null;
     let requiresPrereqs: boolean | null = null;
     let bootstrapSummary: ContextBootstrapSummary | null = null;
@@ -146,6 +204,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     };
 
     const prereqTitlePattern = /(on[-\s]?ramp|prerequisite|foundation|essentials|readiness|primer)/i;
+    const normalizeTitle = (value: string) => value.trim().toLowerCase();
 
     try {
         const snapshot = await orchestratorGraph.getState({
@@ -155,6 +214,9 @@ export const saveRoadmap = async (req: Request, res: Response) => {
         const snapshotValues = snapshot?.values ?? {};
         if (Array.isArray(snapshotValues?.roadmapModules)) {
             modules = snapshotValues.roadmapModules as RoadmapModule[];
+        }
+        if (Array.isArray(snapshotValues?.quizzes)) {
+            quizzes = snapshotValues.quizzes as Quiz[];
         }
         if (typeof snapshotValues?.topic === "string" && snapshotValues.topic.trim().length > 0) {
             resolvedTopic = snapshotValues.topic.trim();
@@ -266,6 +328,107 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                     createdAt: nowIso,
                     updatedAt: nowIso,
                 });
+            }
+
+            let persistedQuizSummaries: Array<{ quizId: number; moduleId: number }> = [];
+            if (quizzes.length > 0) {
+                const moduleIndexByTitle = new Map<string, { moduleId: number; title: string }>();
+                for (const meta of insertedModules) {
+                    moduleIndexByTitle.set(normalizeTitle(meta.title), {
+                        moduleId: meta.moduleId,
+                        title: meta.title,
+                    });
+                }
+
+                const quizInsertValues: Array<{
+                    moduleId: number;
+                    pathId: number;
+                    lessonIndex: number | null;
+                    title: string;
+                    description: string | null;
+                    assessmentType: string;
+                    metadata: Record<string, unknown>;
+                    createdAt: string;
+                    updatedAt: string;
+                }> = [];
+                const questionBatches: QuizQuestion[][] = [];
+
+                for (const quizEntry of quizzes) {
+                    const normalizedModuleTitle = normalizeTitle(quizEntry.moduleTitle ?? "");
+                    const moduleMeta = moduleIndexByTitle.get(normalizedModuleTitle);
+                    if (!moduleMeta) {
+                        continue;
+                    }
+
+                    if (!Array.isArray(quizEntry.questions) || quizEntry.questions.length === 0) {
+                        continue;
+                    }
+
+                    quizInsertValues.push({
+                        moduleId: moduleMeta.moduleId,
+                        pathId,
+                        lessonIndex:
+                            typeof quizEntry.lessonIndex === "number" && Number.isFinite(quizEntry.lessonIndex)
+                                ? quizEntry.lessonIndex
+                                : null,
+                        title: quizEntry.moduleTitle?.trim() || moduleMeta.title,
+                        description: null,
+                        assessmentType: "quiz",
+                        metadata: {
+                            passingPercentage: quizEntry.passingPercentage,
+                            questions: quizEntry.questions.length,
+                        },
+                        createdAt: nowIso,
+                        updatedAt: nowIso,
+                    });
+                    questionBatches.push(quizEntry.questions);
+                }
+
+                if (quizInsertValues.length > 0) {
+                    const insertedQuizzes = await tx
+                        .insert(quiz)
+                        .values(quizInsertValues)
+                        .returning({
+                            quizId: quiz.quizId,
+                            moduleId: quiz.moduleId,
+                        });
+
+                    persistedQuizSummaries = insertedQuizzes;
+
+                    const quizQuestionValues: Array<{
+                        quizId: number;
+                        prompt: string;
+                        questionType: string;
+                        choices: unknown;
+                        answer: string;
+                        explanation: string | null;
+                        metadata: Record<string, unknown>;
+                        createdAt: string;
+                    }> = [];
+
+                    insertedQuizzes.forEach((insertedQuiz, index) => {
+                        const questionSet = questionBatches[index] ?? [];
+                        questionSet.forEach((question, questionIndex) => {
+                            quizQuestionValues.push({
+                                quizId: insertedQuiz.quizId,
+                                prompt: question.prompt,
+                                questionType: question.type,
+                                choices: question.choices ?? null,
+                                answer: question.answer,
+                                explanation: question.explanation ?? null,
+                                metadata: {
+                                    order: questionIndex,
+                                    type: question.type,
+                                },
+                                createdAt: nowIso,
+                            });
+                        });
+                    });
+
+                    if (quizQuestionValues.length > 0) {
+                        await tx.insert(quizQuestion).values(quizQuestionValues);
+                    }
+                }
             }
 
             const orderedModules = [...insertedModules].sort((a, b) => a.position - b.position);
@@ -382,7 +545,13 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                 })
                 .where(eq(learningPath.pathId, pathId));
 
-            return { pathId, insertedModules, progress: progressPayload, dependencies: dependenciesSnapshot };
+            return {
+                pathId,
+                insertedModules,
+                progress: progressPayload,
+                dependencies: dependenciesSnapshot,
+                quizzes: persistedQuizSummaries,
+            };
         });
 
         return res.status(StatusCodes.CREATED).json({
@@ -394,6 +563,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
             bootstrapSummary,
             prerequisitePlan,
             dependencies: result.dependencies,
+            quizzes: result.quizzes,
             savedModules: result.insertedModules,
         });
     } catch (error) {
@@ -571,5 +741,338 @@ export const listPublicRoadmaps = async (req: Request, res: Response) => {
             limit,
             offset,
         },
+    });
+};
+
+export const getModuleQuizzes = async (req: Request, res: Response) => {
+    const userId = Number(req.user_id);
+    if (!Number.isInteger(userId)) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            error: "Authentication required.",
+        });
+    }
+
+    const pathId = Number(req.params.pathId);
+    const moduleId = Number(req.params.moduleId);
+
+    if (!Number.isInteger(pathId) || !Number.isInteger(moduleId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            error: "Invalid path or module id.",
+        });
+    }
+
+    const pathRecord = await db.query.learningPath.findFirst({
+        columns: {
+            pathId: true,
+            userId: true,
+            visibility: true,
+        },
+        where: eq(learningPath.pathId, pathId),
+    });
+
+    if (!pathRecord) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            error: "Learning path not found.",
+        });
+    }
+
+    if (pathRecord.userId !== userId) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+            success: false,
+            error: "You do not have access to this learning path.",
+        });
+    }
+
+    const moduleRecord = await db.query.learningPathModule.findFirst({
+        columns: { pathModuleId: true },
+        where: and(
+            eq(learningPathModule.pathId, pathId),
+            eq(learningPathModule.moduleId, moduleId),
+        ),
+    });
+
+    if (!moduleRecord) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            error: "Module not found within learning path.",
+        });
+    }
+
+    const quizBundles = await loadQuizzesWithQuestions(pathId, moduleId);
+
+    const quizzes = quizBundles.map(({ quiz: quizRecord, questions }) => {
+        const metadata = (quizRecord.metadata ?? {}) as Record<string, unknown>;
+        const rawPassing = metadata.passingPercentage;
+        const passingPercentage =
+            typeof rawPassing === "number" && Number.isFinite(rawPassing)
+                ? Math.max(0, Math.min(100, rawPassing))
+                : 70;
+
+        return {
+            quizId: quizRecord.quizId,
+            moduleId: quizRecord.moduleId,
+            pathId: quizRecord.pathId,
+            lessonIndex: quizRecord.lessonIndex,
+            title: quizRecord.title,
+            passingPercentage,
+            questionCount: questions.length,
+            questions: questions.map((question) => ({
+                questionId: question.questionId,
+                prompt: question.prompt,
+                questionType: question.questionType,
+                choices: Array.isArray(question.choices)
+                    ? question.choices.map((choice) =>
+                          typeof choice === "string" ? choice : String(choice),
+                      )
+                    : [],
+                explanation: question.explanation ?? null,
+            })),
+        };
+    });
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        quizzes,
+    });
+};
+
+export const submitQuizAssessment = async (req: Request, res: Response) => {
+    const userId = Number(req.user_id);
+    if (!Number.isInteger(userId)) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            error: "Authentication required.",
+        });
+    }
+
+    const pathId = Number(req.params.pathId);
+    const moduleId = Number(req.params.moduleId);
+    const quizId = Number(req.params.quizId);
+
+    if (!Number.isInteger(pathId) || !Number.isInteger(moduleId) || !Number.isInteger(quizId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            error: "Invalid path, module, or quiz id.",
+        });
+    }
+
+    const submission = quizSubmissionSchema.safeParse(req.body);
+    if (!submission.success) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            errors: submission.error.flatten().fieldErrors,
+        });
+    }
+
+    const pathRecord = await db.query.learningPath.findFirst({
+        columns: {
+            pathId: true,
+            userId: true,
+        },
+        where: eq(learningPath.pathId, pathId),
+    });
+
+    if (!pathRecord) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            error: "Learning path not found.",
+        });
+    }
+
+    if (pathRecord.userId !== userId) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+            success: false,
+            error: "You do not have access to this learning path.",
+        });
+    }
+
+    const [quizResult] = await loadQuizzesWithQuestions(pathId, moduleId, quizId);
+
+    if (!quizResult) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            error: "Quiz not found for module.",
+        });
+    }
+
+    const { quiz: quizRecord, questions: questionList } = quizResult;
+    if (questionList.length === 0) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            error: "Quiz has no questions configured.",
+        });
+    }
+
+    const answerMap = new Map<number, string>();
+    for (const answer of submission.data.answers) {
+        answerMap.set(answer.questionId, answer.answer.trim());
+    }
+
+    const evaluateAnswer = (question: typeof questionList[number], provided: string | null) => {
+        if (!provided || provided.length === 0) return false;
+        const correctAnswer = (question.answer ?? "").trim();
+        if (correctAnswer.length === 0) return false;
+
+        const normalizedProvided = provided.toLowerCase();
+        const normalizedCorrect = correctAnswer.toLowerCase();
+        return normalizedProvided === normalizedCorrect;
+    };
+
+    const questionResults = questionList.map((question) => {
+        const provided = answerMap.get(question.questionId) ?? null;
+        const isCorrect = evaluateAnswer(question, provided);
+        return {
+            question,
+            provided,
+            isCorrect,
+        };
+    });
+
+    const correctCount = questionResults.filter((result) => result.isCorrect).length;
+    const totalQuestions = questionList.length;
+    const rawScore = totalQuestions === 0 ? 0 : (correctCount / totalQuestions) * 100;
+    const score = Math.round(rawScore * 100) / 100;
+
+    const metadata = (quizRecord.metadata ?? {}) as Record<string, unknown>;
+    const rawPassing = metadata.passingPercentage;
+    const passingPercentage =
+        typeof rawPassing === "number" && Number.isFinite(rawPassing)
+            ? Math.max(0, Math.min(100, rawPassing))
+            : 70;
+    const passed = score >= passingPercentage;
+
+    const nowIso = new Date().toISOString();
+
+    await db.transaction(async (tx) => {
+        const answerRows = questionResults.map((result) => ({
+            userId,
+            questionId: result.question.questionId,
+            answer: result.provided ?? "",
+            isCorrect: result.isCorrect,
+            createdAt: nowIso,
+        }));
+
+        if (answerRows.length > 0) {
+            await tx
+                .insert(userQuizAnswer)
+                .values(answerRows)
+                .onConflictDoUpdate({
+                    target: [userQuizAnswer.userId, userQuizAnswer.questionId],
+                    set: {
+                        answer: sql`excluded.answer`,
+                        isCorrect: sql`excluded.is_correct`,
+                        createdAt: sql`excluded.created_at`,
+                    },
+                });
+        }
+
+        const moduleStatus = passed ? "completed" : "in_progress";
+        await tx
+            .insert(userModuleProgress)
+            .values({
+                userId,
+                moduleId,
+                pathId,
+                status: moduleStatus,
+                completionPercent: score.toFixed(2),
+                lastAccessed: nowIso,
+            })
+            .onConflictDoUpdate({
+                target: [
+                    userModuleProgress.userId,
+                    userModuleProgress.moduleId,
+                    userModuleProgress.pathId,
+                ],
+                set: {
+                    status: moduleStatus,
+                    completionPercent: score.toFixed(2),
+                    lastAccessed: nowIso,
+                },
+            });
+    });
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        pathId,
+        moduleId,
+        quizId,
+        totalQuestions,
+        correctCount,
+        score,
+        passingPercentage,
+        passed,
+        results: questionResults.map((result) => ({
+            questionId: result.question.questionId,
+            prompt: result.question.prompt,
+            questionType: result.question.questionType,
+            answerGiven: result.provided,
+            isCorrect: result.isCorrect,
+            correctAnswer: result.question.answer,
+        })),
+    });
+};
+
+export const getLearningPathProgress = async (req: Request, res: Response) => {
+    const userId = Number(req.user_id);
+    if (!Number.isInteger(userId)) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+            success: false,
+            error: "Authentication required.",
+        });
+    }
+
+    const pathId = Number(req.params.pathId);
+    if (!Number.isInteger(pathId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            error: "Invalid learning path id.",
+        });
+    }
+
+    const pathRecord = await db.query.learningPath.findFirst({
+        columns: {
+            pathId: true,
+            userId: true,
+        },
+        where: eq(learningPath.pathId, pathId),
+    });
+
+    if (!pathRecord) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            error: "Learning path not found.",
+        });
+    }
+
+    if (pathRecord.userId !== userId) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+            success: false,
+            error: "You do not have access to this learning path.",
+        });
+    }
+
+    const progressRows = await db
+        .select({
+            moduleId: userModuleProgress.moduleId,
+            status: userModuleProgress.status,
+            completionPercent: userModuleProgress.completionPercent,
+            lastAccessed: userModuleProgress.lastAccessed,
+        })
+        .from(userModuleProgress)
+        .where(
+            and(
+                eq(userModuleProgress.pathId, pathId),
+                eq(userModuleProgress.userId, userId),
+            ),
+        )
+        .orderBy(userModuleProgress.moduleId);
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        pathId,
+        moduleProgress: progressRows,
     });
 };

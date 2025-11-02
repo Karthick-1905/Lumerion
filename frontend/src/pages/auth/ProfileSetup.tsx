@@ -97,7 +97,7 @@ export default function ProfileSetup() {
           <div className="flex items-center justify-start mb-6 gap-2">
             {[1,2,3,4].map(s => (
               <div key={s} className={`w-16 h-2 rounded-full transition-all duration-300 ${
-                step === s ? 'bg-accent' : step > s ? 'bg-green-500' : 'bg-border'
+                step === s ? 'bg-white' : step > s ? 'bg-white/30' : 'bg-border'
               }`}></div>
             ))}
           </div>
@@ -116,15 +116,15 @@ export default function ProfileSetup() {
                       onClick={() => handleAutoTransition('lmsUse', use)}
                       className={`group relative w-full py-4 px-6 rounded-xl border-2 transition-all duration-300 font-medium text-left overflow-hidden ${
                         form.lmsUse === use 
-                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30 scale-105' 
-                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90 hover:scale-102'
+                          ? 'bg-white/10 text-primary border-white/30 shadow-lg shadow-black/30 scale-105' 
+                          : 'bg-secondary text-secondary border-border hover:border-white/20 hover:bg-white/5 hover:text-primary hover:scale-102'
                       }`}
                     >
                       <div className="relative z-10">
                         {use}
                       </div>
                       {form.lmsUse === use && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 opacity-20"></div>
+                        <div className="absolute inset-0 bg-linear-to-r from-white/20 to-transparent opacity-20"></div>
                       )}
                     </button>
                   ))}
@@ -144,15 +144,15 @@ export default function ProfileSetup() {
                       onClick={() => handleAutoTransition('userType', type)}
                       className={`group relative w-full py-4 px-6 rounded-xl border-2 transition-all duration-300 font-medium text-center overflow-hidden ${
                         form.userType === type 
-                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30 scale-105' 
-                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90 hover:scale-102'
+                          ? 'bg-white/10 text-primary border-white/30 shadow-lg shadow-black/30 scale-105' 
+                          : 'bg-secondary text-secondary border-border hover:border-white/20 hover:bg-white/5 hover:text-primary hover:scale-102'
                       }`}
                     >
                       <div className="relative z-10">
                         {type}
                       </div>
                       {form.userType === type && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 opacity-20"></div>
+                        <div className="absolute inset-0 bg-linear-to-r from-white/20 to-transparent opacity-20"></div>
                       )}
                     </button>
                   ))}
@@ -172,15 +172,15 @@ export default function ProfileSetup() {
                       onClick={() => handleAutoTransition('studyStyle', style)}
                       className={`group relative w-full py-6 px-6 rounded-xl border-2 transition-all duration-300 font-medium text-center overflow-hidden ${
                         form.studyStyle === style 
-                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30 scale-105' 
-                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90 hover:scale-102'
+                          ? 'bg-white/10 text-primary border-white/30 shadow-lg shadow-black/30 scale-105' 
+                          : 'bg-secondary text-secondary border-border hover:border-white/20 hover:bg-white/5 hover:text-primary hover:scale-102'
                       }`}
                     >
                       <div className="relative z-10">
                         {style}
                       </div>
                       {form.studyStyle === style && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 opacity-20"></div>
+                        <div className="absolute inset-0 bg-linear-to-r from-white/20 to-transparent opacity-20"></div>
                       )}
                     </button>
                   ))}
@@ -201,8 +201,8 @@ export default function ProfileSetup() {
                       onClick={() => handleInterestChange(field)}
                       className={`px-6 py-3 rounded-full border-2 transition-all duration-300 font-medium text-sm hover:scale-105 ${
                         form.interests.includes(field) 
-                          ? 'bg-accent text-primary border-accent shadow-lg shadow-accent/30' 
-                          : 'bg-secondary text-secondary border-border hover:border-accent hover:bg-secondary/90'
+                          ? 'bg-white/10 text-primary border-white/30 shadow-lg shadow-black/30' 
+                          : 'bg-secondary text-secondary border-border hover:border-white/20 hover:bg-white/5 hover:text-primary'
                       }`}
                     >
                       {field}
@@ -215,7 +215,7 @@ export default function ProfileSetup() {
                     placeholder="Please specify your other interest..."
                     value={form.otherInterest}
                     onChange={e => handleChange('otherInterest', e.target.value)}
-                    className="w-full rounded-xl border-2 border-border bg-secondary px-6 py-3 text-primary placeholder-secondary focus:border-accent focus:outline-none hover:border-accent/50 transition-all duration-300 shadow-inner"
+                    className="w-full rounded-xl border-2 border-border bg-secondary px-6 py-3 text-primary placeholder-secondary focus:border-white/30 focus:outline-none hover:border-white/20 transition-all duration-300 shadow-inner"
                   />
                 )}
               </div>
@@ -249,7 +249,7 @@ export default function ProfileSetup() {
                   (step === 2 && !form.userType) ||
                   (step === 3 && !form.studyStyle)
                 }
-                className="px-8 py-3 rounded-xl bg-accent text-primary font-medium disabled:bg-secondary disabled:cursor-not-allowed hover:bg-accent/90 transition-all duration-300 flex items-center gap-2 shadow-lg shadow-accent/30"
+                className="px-8 py-3 rounded-xl bg-linear-to-r from-[#7FDBCA] to-[#4CB0A3] text-white font-medium disabled:bg-secondary disabled:text-secondary disabled:cursor-not-allowed hover:from-[#6BC9B8] hover:to-[#459D93] transition-all duration-300 flex items-center gap-2 shadow-lg shadow-black/30"
               >
                 Next
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,7 +261,7 @@ export default function ProfileSetup() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={form.interests.length === 0 || isLoading}
-                className="px-8 py-3 rounded-xl bg-green-600 text-white font-medium disabled:bg-secondary disabled:cursor-not-allowed hover:bg-green-700 transition-all duration-300 flex items-center gap-2 shadow-lg shadow-green-600/30"
+                className="px-8 py-3 rounded-xl bg-linear-to-r from-[#7FDBCA] to-[#4CB0A3] text-white font-medium disabled:bg-secondary disabled:text-secondary disabled:cursor-not-allowed hover:from-[#6BC9B8] hover:to-[#459D93] transition-all duration-300 flex items-center gap-2 shadow-lg shadow-black/30"
               >
                 {isLoading ? (
                   <>

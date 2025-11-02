@@ -162,10 +162,10 @@ export default function ResetPassword() {
             <div className="mb-6 text-xs text-secondary">
               <p>Password requirements:</p>
               <ul className="list-disc list-inside mt-1 space-y-1">
-                <li className={formData.newPassword.length >= 8 ? 'text-green-400' : ''}>
+                <li className={formData.newPassword.length >= 8 ? 'text-white/80' : ''}>
                   At least 8 characters
                 </li>
-                <li className={formData.newPassword === formData.confirmPassword && formData.confirmPassword ? 'text-green-400' : ''}>
+                <li className={formData.newPassword === formData.confirmPassword && formData.confirmPassword ? 'text-white/80' : ''}>
                   Passwords match
                 </li>
               </ul>

@@ -113,6 +113,9 @@ export const mockDb: any = {
     learningPath: {
       findFirst: jest.fn(),
     },
+      learningPathModule: {
+        findFirst: jest.fn(),
+      },
     friendRequest: {
       findFirst: jest.fn(),
       findMany: jest.fn(),

@@ -8,31 +8,9 @@ const StudyGroupDetail = () => {
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useStudyGroupDetail(Number(groupId));
 
-  const getVisibilityBadge = (visibility: string) => {
-    switch (visibility) {
-      case 'public':
-        return 'bg-green-500/10 text-green-400 border-green-500/20';
-      case 'private':
-        return 'bg-red-500/10 text-red-400 border-red-500/20';
-      case 'restricted':
-        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-    }
-  };
+  const getVisibilityBadge = (_visibility: string) => 'bg-white/5 text-white/80 border-white/10';
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'owner':
-        return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-      case 'admin':
-        return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-      case 'member':
-        return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-    }
-  };
+  const getRoleBadge = (_role: string) => 'bg-white/5 text-white/80 border-white/10';
 
   const getInitials = (name: string) => {
     return name
@@ -64,7 +42,7 @@ const StudyGroupDetail = () => {
         {isLoading && (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-[#7FDBCA] border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-12 h-12 border-4 border-white/20 border-t-transparent rounded-full animate-spin"></div>
               <p className="text-gray-400">Loading study group...</p>
             </div>
           </div>
@@ -107,8 +85,8 @@ const StudyGroupDetail = () => {
                 <div className="bg-[#242424] border border-gray-800 rounded-2xl p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] rounded-2xl flex items-center justify-center">
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-16 h-16 bg-white/10 border border-white/15 rounded-2xl flex items-center justify-center">
+                        <svg className="w-8 h-8 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                       </div>
@@ -141,7 +119,7 @@ const StudyGroupDetail = () => {
 
                 <div className="bg-[#242424] border border-gray-800 rounded-2xl p-6">
                   <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <svg className="w-6 h-6 text-[#7FDBCA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     Meeting Schedule
@@ -159,10 +137,10 @@ const StudyGroupDetail = () => {
                   <div className="mt-4 flex items-center gap-2 text-sm">
                     {data.group.settings.allowRecording ? (
                       <>
-                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        <span className="text-green-400">Recording allowed</span>
+                        <span className="text-white/70">Recording allowed</span>
                       </>
                     ) : (
                       <>
@@ -180,7 +158,7 @@ const StudyGroupDetail = () => {
                 <div className="bg-[#242424] border border-gray-800 rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-white">Members</h2>
-                    <span className="px-3 py-1 bg-[#7FDBCA]/10 text-[#7FDBCA] text-sm font-medium rounded-lg border border-[#7FDBCA]/20">
+                    <span className="px-3 py-1 bg-white/10 text-white/80 text-sm font-medium rounded-lg border border-white/15">
                       {data.group.members.length}
                     </span>
                   </div>
@@ -189,9 +167,9 @@ const StudyGroupDetail = () => {
                     {data.group.members.map((member: GroupMember) => (
                       <div
                         key={member.userId}
-                        className="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-[#7FDBCA]/30 transition-colors"
+                        className="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-white/20 transition-colors"
                       >
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        <div className="w-10 h-10 bg-white/10 border border-white/15 rounded-full flex items-center justify-center text-white/80 font-bold text-sm shrink-0">
                           {member.avatarUrl ? (
                             <img src={member.avatarUrl} alt={member.userName} className="w-full h-full rounded-full object-cover" />
                           ) : (
@@ -210,7 +188,7 @@ const StudyGroupDetail = () => {
                           </p>
                         </div>
                         {member.status === 'active' && (
-                          <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0"></div>
+                          <div className="w-2 h-2 bg-white/60 rounded-full shrink-0"></div>
                         )}
                       </div>
                     ))}
