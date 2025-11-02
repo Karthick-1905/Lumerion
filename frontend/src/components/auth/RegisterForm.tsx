@@ -140,7 +140,7 @@ export default function RegisterForm({
 
         <div className="mt-6 text-sm text-center text-[#7F7F90]">
           Already part of the learning circle?{' '}
-          <a href="/auth/login" className="font-medium text-[#8F8FF6] hover:text-[#6B6BEF]">
+          <a href="/login" className="font-medium text-[#8F8FF6] hover:text-[#6B6BEF]">
             Log in
           </a>
         </div>

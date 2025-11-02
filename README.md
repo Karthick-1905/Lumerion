@@ -1,17 +1,7 @@
 # 🎓 ADL LMS - Advanced Digital Learning Management System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shi## 📚 Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
-
-- **[API Documentation](docs/api.md)** - Complete API reference with examples
-- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
-- **[Mock Data Setup](docs/mock-data-setup.md)** - Populate database with sample achievements and skills
-- **[Troubleshooting Guide](docs/troubleshooting.md)** - Common issues and solutions
-- **[Architecture Overview](docs/knowledge-graph-agent-plan.md)** - System architecture and design
-- **[Roadmap](docs/roadmap.md)** - Product roadmap and feature planning
-- **[Notion Integration](docs/notion-mcp-integration.md)** - External integrations guidedge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19+-61dafb.svg)](https://reactjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)

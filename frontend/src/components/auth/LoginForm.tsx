@@ -93,7 +93,7 @@ export default function LoginForm({
 
       <div className="mt-6 text-sm text-center text-[#7F7F90]">
         New to the learning studio?{' '}
-        <a href="/auth/register" className="font-medium text-[#8F8FF6] hover:text-[#6B6BEF]">
+        <a href="/register" className="font-medium text-[#8F8FF6] hover:text-[#6B6BEF]">
           Create an account
         </a>
       </div>

@@ -20,9 +20,11 @@ import SkillAssessment from './pages/skillAssessment/SkillAssessment'
 import ActivityFeed from './pages/activityFeed/ActivityFeed'
 import ToastContainer from './components/ui/ToastContainer'
 import NotePage from './pages/notes/NotePage'
+import LandingPage from './pages/landingPage/LandingPage'
 
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path='/' element={<MainLayout/>}>
+      <Route index element={<LandingPage/>}/>
       <Route path='/register' element={<Register/>}/>
       <Route path='/login' element={<Login/>}/>
       <Route path='/verify-email' element={<VerifyEmail/>}/>
