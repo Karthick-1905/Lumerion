@@ -32,9 +32,9 @@ jest.unstable_mockModule("../../src/agents/roadmapGenerator/tool", () => ({
   userProfileTool: { invoke: userProfileInvokeMock },
 }));
 
-const { contextBootstrapNode } = await import("../../src/agents/roadmapGenerator/nodes/contextBootstrap");
-const { messageContentToString } = await import("../../src/agents/roadmapGenerator/utils/messages");
-const { normaliseStringList } = await import("../../src/agents/roadmapGenerator/utils/text");
+const { contextBootstrapNode } = await import("../../src/agents/roadmap/nodes/contextBootstrap");
+const { messageContentToString } = await import("../../src/agents/utils/messages");
+const { normaliseStringList } = await import("../../src/agents/utils/text");
 
 const resetMocks = () => {
   chainInvokeMock.mockReset();

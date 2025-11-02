@@ -16,6 +16,7 @@ import type {
 	SearchQueriesToolInput,
 	SearchQueriesToolOutput,
 } from "./state";
+
 const resolveTavilyApiKey = (): string | undefined => {
 	const maybeProcess = (globalThis as {
 		process?: { env?: Record<string, string | undefined> };

@@ -9,10 +9,10 @@ import type {
 	LearnerProfileSnapshot,
 } from "../state";
 import { contextBootstrapPromptTemplate } from "../prompt";
-import { createGeminiModel } from "../utils/modelProvider";
-import { messageContentToString } from "../utils/messages";
+import { createGeminiModel } from "../../utils/modelProvider";
+import { messageContentToString } from "../../utils/messages";
 import { userProfileTool } from "../tool";
-import { normaliseStringList } from "../utils/text";
+import { normaliseStringList } from "../../utils/text";
 
 const contextBootstrapSchema = z.object({
 	topic_statement: z.string().min(1, "Topic statement cannot be empty"),

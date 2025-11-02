@@ -2,10 +2,10 @@ import { z } from "zod";
 import type { RunnableConfig } from "@langchain/core/runnables";
 
 import type { RoadmapModule, RoadmapGraphState, RoadmapLesson } from "../state";
-import { createGeminiModel } from "../utils/modelProvider";
+import { createGeminiModel } from "../../utils/modelProvider";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { curriculumComposerInternals } from "./curriculumComposer";
-import { normaliseStringList } from "../utils/text";
+import { normaliseStringList } from "../../utils/text";
 
 const { fallbackResourcesForLesson, fallbackMasteryCheck } = curriculumComposerInternals;
 

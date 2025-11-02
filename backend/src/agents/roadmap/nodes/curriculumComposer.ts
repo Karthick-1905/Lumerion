@@ -4,14 +4,13 @@ import type { RunnableConfig } from "@langchain/core/runnables";
 import type {
 	CurriculumComposerNodeInput,
 	CurriculumComposerNodeOutput,
-	GraphContextSnapshot,
 	PrerequisitePlanSummary,
 	RoadmapLesson,
 	RoadmapModule,
 } from "../state";
 import { curriculumComposerPromptTemplate } from "../prompt";
-import { createGeminiModel } from "../utils/modelProvider";
-import { normaliseStringList } from "../utils/text";
+import { createGeminiModel } from "../../utils/modelProvider";
+import { normaliseStringList } from "../../utils/text";
 
 const lessonSchema = z.object({
 	title: z.string().min(1),
@@ -34,80 +33,6 @@ const curriculumComposerSchema = z.object({
 type CurriculumComposerRawOutput = z.infer<typeof curriculumComposerSchema>;
 
 const normaliseKey = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-
-const fallbackResourceLibrary: Array<{
-	keywords: string[];
-	resources: string[];
-}> = [
-	{
-		keywords: ["network", "networking", "computer science", "cs"],
-		resources: normaliseStringList([
-			"Khan Academy – Internet networking (https://www.khanacademy.org/computing/computer-science/internet-intro)",
-			"CS50x 2024 – Lecture on computer science fundamentals (https://cs50.harvard.edu/x/2024/)",
-		]),
-	},
-	{
-		keywords: ["cryptograph"],
-		resources: normaliseStringList([
-			"Khan Academy – Cryptography (https://www.khanacademy.org/computing/computer-science/cryptography)",
-			"Cryptography Engineering by Ferguson, Schneier & Kohno",
-		]),
-	},
-	{
-		keywords: ["decentralization", "decentralisation", "decentralized"],
-		resources: normaliseStringList([
-			"The Decentralized Web Primer (https://getdweb.com/)",
-			"Understanding Decentralization by Vitalik Buterin",
-		]),
-	},
-	{
-		keywords: ["blockchain"],
-		resources: normaliseStringList([
-			"Mastering Bitcoin by Andreas M. Antonopoulos",
-			"Coursera – Blockchain Basics by University at Buffalo",
-		]),
-	},
-	{
-		keywords: ["consensus", "proof-of-work", "proof-of-stake"],
-		resources: normaliseStringList([
-			"Ethereum.org – Consensus mechanisms overview (https://ethereum.org/en/developers/docs/consensus-mechanisms/)",
-			"Proof-of-Work vs Proof-of-Stake – Basic Mining Guide",
-		]),
-	},
-	{
-		keywords: ["nft", "non-fungible"],
-		resources: normaliseStringList([
-			"NFTs: A Primer by Linda Xie (https://a16zcrypto.com/content/article/nfts-a-primer/)",
-			"OpenSea NFT Resource Center (https://opensea.io/learn)",
-		]),
-	},
-	{
-		keywords: ["smart contract"],
-		resources: normaliseStringList([
-			"Ethereum.org – Smart contract documentation (https://ethereum.org/en/developers/docs/smart-contracts/)",
-			"Solidity by Example (https://solidity-by-example.org/)",
-		]),
-	},
-	{
-		keywords: ["web3", "defi", "dao"],
-		resources: normaliseStringList([
-			"Web3 Foundation resources (https://web3.foundation/)",
-			"DappRadar – Track decentralized applications (https://dappradar.com/)",
-		]),
-	},
-	{
-		keywords: ["nft marketplace", "project", "hands-on"],
-		resources: normaliseStringList([
-			"OpenSea – Getting Started guide (https://support.opensea.io/hc/en-us/articles/1500006315942-Getting-Started)",
-			"buildspace – Build Web3 projects (https://buildspace.so/)",
-		]),
-	},
-];
-
-const fallbackMasteryCheck = (lessonTitle: string, moduleTitle: string): string => {
-	const concept = lessonTitle.trim();
-	return `Demonstrate mastery by explaining "${concept}" to a peer, outlining a real-world example, and answering questions without notes. Share how it reinforces the "${moduleTitle}" module objectives.`;
-};
 
 const findPlanStepMatch = (
 	lessonTitle: string,
@@ -136,66 +61,30 @@ const findPlanStepMatch = (
 	);
 };
 
-const gatherGraphResources = (
-	lessonTitle: string,
-	graphContext: GraphContextSnapshot | null,
-	limit = 3,
-): string[] => {
-	if (!graphContext) return [];
-	const lessonKey = normaliseKey(lessonTitle);
-	return graphContext.relatedResources
-		.filter((resource) => {
-			const titleKey = normaliseKey(resource.title ?? "");
-			return titleKey.length > 0 && (lessonKey.includes(titleKey) || titleKey.includes(lessonKey));
-		})
-		.slice(0, limit)
-		.map((resource) => {
-			const parts: string[] = [resource.title];
-			if (resource.url) parts.push(resource.url);
-			return parts.filter(Boolean).join(" – ");
-		});
-};
-
-const fallbackResourcesForLesson = (lessonTitle: string): string[] => {
-	const lessonKey = normaliseKey(lessonTitle);
-	for (const entry of fallbackResourceLibrary) {
-		const matches = entry.keywords.some((keyword) => lessonKey.includes(keyword));
-		if (matches) {
-			return entry.resources;
-		}
-	}
-	return normaliseStringList([
-		`${lessonTitle} – explore official documentation and reputable tutorials (e.g., freeCodeCamp, Coursera, or vendor docs).`,
-		`Watch a conference talk or workshop on ${lessonTitle} to see practical implementations.`,
-	]);
-};
-
 const enrichModules = (
 	modules: RoadmapModule[],
 	plan: PrerequisitePlanSummary | null,
-	graphContext: GraphContextSnapshot | null,
 ): RoadmapModule[] => {
 	return modules.map((module) => {
 		const updatedLessons = module.lessons.map((lesson) => {
 			const baseResources = normaliseStringList(lesson.recommendedResources ?? []);
 			const planMatch = findPlanStepMatch(lesson.title, plan);
 			const planResources = planMatch ? normaliseStringList(planMatch.recommendedResources ?? []) : [];
-			const graphResources = gatherGraphResources(lesson.title, graphContext);
 			const combinedResources = normaliseStringList([
 				...baseResources,
 				...planResources,
-				...graphResources,
 			]);
 
-			const resources = combinedResources.length > 0
-				? combinedResources
-				: fallbackResourcesForLesson(lesson.title);
+			const resources = combinedResources.length > 0 ? combinedResources : normaliseStringList(["Resources not found"]);
 
-			const masteryCheck = lesson.masteryCheck && lesson.masteryCheck.trim().length > 0
-				? lesson.masteryCheck.trim()
-				: planMatch && planMatch.masteryCheck
-					? planMatch.masteryCheck.trim()
-					: fallbackMasteryCheck(lesson.title, module.title);
+			const lessonMasteryCheck = lesson.masteryCheck?.trim();
+			const planMasteryCheck = planMatch?.masteryCheck?.trim();
+			const masteryCheck =
+				lessonMasteryCheck && lessonMasteryCheck.length > 0
+					? lessonMasteryCheck
+					: planMasteryCheck && planMasteryCheck.length > 0
+						? planMasteryCheck
+						: null;
 
 			return {
 				...lesson,
@@ -212,9 +101,7 @@ const enrichModules = (
 };
 
 export const curriculumComposerInternals = {
-	enrichModules,
-	fallbackResourcesForLesson,
-	fallbackMasteryCheck,
+    enrichModules,
 };
 
 const formatPrerequisitePlanForPrompt = (plan: PrerequisitePlanSummary | null): string => {
@@ -246,30 +133,6 @@ const formatPrerequisitePlanForPrompt = (plan: PrerequisitePlanSummary | null): 
 	return lines.join("\n");
 };
 
-const formatResourceCatalogue = (graphContext: GraphContextSnapshot | null): string => {
-	if (!graphContext || graphContext.relatedResources.length === 0) {
-		return "No pre-indexed resources supplied; curate trustworthy materials during module planning.";
-	}
-
-	return graphContext.relatedResources
-		.map((resource) => {
-			const parts: string[] = [resource.title];
-			if (resource.resourceType) {
-				parts.push(`type: ${resource.resourceType}`);
-			}
-			if (resource.difficulty) {
-				parts.push(`difficulty: ${resource.difficulty}`);
-			}
-			if (resource.description) {
-				parts.push(`summary: ${resource.description}`);
-			}
-			if (resource.url) {
-				parts.push(`url: ${resource.url}`);
-			}
-			return `- ${parts.join(" | ")}`;
-		})
-		.join("\n");
-};
 
 const mapModule = (module: CurriculumComposerRawOutput["modules"][number]): RoadmapModule => {
 	const lessons: RoadmapLesson[] = module.lessons.map((lesson) => ({
@@ -290,7 +153,6 @@ const mapModule = (module: CurriculumComposerRawOutput["modules"][number]): Road
 		title: module.title,
 		description: module.description,
 		lessons,
-		notes: null,
 	};
 };
 
@@ -402,14 +264,12 @@ const integratePrerequisitePlan = (
 		title: "On-Ramp: Prerequisite Foundations",
 		description: buildDescriptionWithPlan("Fast-track the essential foundations before tackling the core journey.", plan),
 		lessons: plan.steps.map(createLessonFromStep),
-		notes: null,
 	};
 
 	return [planModule, ...modulesCopy];
 };
 
 
-//TODO : Review The Circullum Composer
 
 export const curriculumComposerNode = async (
 	state: CurriculumComposerNodeInput,
@@ -426,7 +286,6 @@ export const curriculumComposerNode = async (
 	}
 
 	const plan = state.prerequisitePlan ?? null;
-	const graphContext = state.graphContext ?? null;
 
 	const model = createGeminiModel({ temperature: 0.15 });
 	const chain = curriculumComposerPromptTemplate.pipe(
@@ -442,7 +301,6 @@ export const curriculumComposerNode = async (
 			learning_constraints: bootstrapSummary.learningConstraints.join(" | "),
 			learning_preferences: bootstrapSummary.learningPreferences.join(" | "),
 			prerequisite_plan: formatPrerequisitePlanForPrompt(plan),
-			resource_catalogue: formatResourceCatalogue(graphContext),
 		},
 		config,
 	)) as CurriculumComposerRawOutput;
@@ -452,7 +310,7 @@ export const curriculumComposerNode = async (
 		plan,
 	);
 
-	const enrichedModules = enrichModules(integratedModules, plan, graphContext);
+	const enrichedModules = enrichModules(integratedModules, plan);
 
 	return { modules: enrichedModules };
 };

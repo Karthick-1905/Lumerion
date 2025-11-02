@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { RunnableConfig } from "@langchain/core/runnables";
-import type { RoadmapGraphState, RoadmapModule } from "../state";
-import { fetchNotionNotesForModule } from "../services/notionModuleNotes";
+import type { RoadmapGraphState, RoadmapModule } from "../../roadmap/state";
+import { fetchNotionNotesForModule } from "./notionModuleNotes";
 
 const moduleNotesInputSchema = z.object({
   modules: z.array(

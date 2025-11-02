@@ -4,28 +4,17 @@ import { type BaseMessage } from "@langchain/core/messages";
 export type AnyRecord = Record<string, any>;
 
 export interface RoadmapLesson {
-	title: string;
-	description: string;
-	estimatedTimeHours: number | null;
-	recommendedResources: string[];
-	masteryCheck?: string | null;
-}
-
-export interface ModuleNoteContent {
-	pageId: string;
-	title?: string | null;
-	url?: string | null;
-	lastEditedTime?: string | null;
-	fetchedAt: string;
-	blocks: Array<Record<string, any>>;
-	metadata?: Record<string, unknown>;
+    title: string;
+    description: string;
+    estimatedTimeHours: number | null;
+    recommendedResources: string[];
+    masteryCheck?: string | null;
 }
 
 export interface RoadmapModule {
-	title: string;
-	description: string;
-	lessons: RoadmapLesson[];
-	notes?: ModuleNoteContent | null;
+    title: string;
+    description: string;
+    lessons: RoadmapLesson[];
 }
 
 export interface LearnerProfileMetrics {
@@ -64,36 +53,6 @@ export interface ContextBootstrapSummary {
 	learningPreferences: string[];
 	successCriteria: string[];
 	otherNotes?: string;
-}
-
-export interface GraphConceptSummary {
-	conceptId: string;
-	name: string;
-	conceptType?: string | null;
-	description?: string | null;
-	difficulty?: string | null;
-	importance?: number | null;
-	readiness?: number | null;
-	recommendedDurationHours?: number | null;
-	links?: string[];
-}
-
-export interface GraphResourceSummary {
-	resourceId: string;
-	title: string;
-	url: string;
-	resourceType?: string | null;
-	difficulty?: string | null;
-	description?: string | null;
-	recommendedOrder?: number | null;
-}
-
-export interface GraphContextSnapshot {
-	focusConcept: GraphConceptSummary | null;
-	directPrerequisites: GraphConceptSummary[];
-	supportingConcepts: GraphConceptSummary[];
-	relatedResources: GraphResourceSummary[];
-	graphNotes?: string;
 }
 
 export interface PrerequisitePlanStep {
@@ -171,10 +130,6 @@ export const RoadmapStateAnnotation = Annotation.Root({
 		reducer: (_left, right) => right,
 		default: () => null,
 	}),
-	graphContext: Annotation<GraphContextSnapshot | null>({
-		reducer: (_left, right) => right,
-		default: () => null,
-	}),
 	prerequisitePlan: Annotation<PrerequisitePlanSummary | null>({
 		reducer: (_left, right) => right,
 		default: () => null,
@@ -223,12 +178,12 @@ export type PrerequisiteResolverNodeInput = Pick<
 
 export type PrerequisiteResolverNodeOutput = Pick<
 	RoadmapGraphState,
-	"graphContext" | "prerequisitePlan"
+	"prerequisitePlan"
 >;
 
 export type CurriculumComposerNodeInput = Pick<
 	RoadmapGraphState,
-	"topic" | "bootstrapSummary" | "graphContext" | "prerequisitePlan"
+	"topic" | "bootstrapSummary" |  "prerequisitePlan"
 >;
 
 export type CurriculumComposerNodeOutput = Pick<RoadmapGraphState, "modules">;

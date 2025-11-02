@@ -1,4 +1,3 @@
-import type { ModuleNoteContent } from "../state";
 import { isNotionMcpConfigured, notionMcpClient } from "../tools/notionMcpClient";
 
 const MAX_BLOCK_DEPTH = 4;
@@ -133,6 +132,16 @@ const collectBlocksRecursive = async (
 };
 
 let hasLoggedMissingConfig = false;
+
+interface ModuleNoteContent {
+	pageId: string;
+	title?: string | null;
+	url?: string | null;
+	lastEditedTime?: string | null;
+	fetchedAt: string;
+	blocks: Array<Record<string, any>>;
+	metadata?: Record<string, unknown>;
+}
 
 export const fetchNotionNotesForModule = async (
 	moduleTitle: string,

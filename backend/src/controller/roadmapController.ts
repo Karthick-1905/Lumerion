@@ -5,13 +5,8 @@ import { HumanMessage } from "@langchain/core/messages";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
-import { roadmapGraph } from "../agents/roadmapGenerator/graph";
-import {
-    ContextBootstrapSummary,
-    GraphContextSnapshot,
-    PrerequisitePlanSummary,
-    RoadmapModule,
-} from "../agents/roadmapGenerator/state";
+import { orchestratorGraph } from "../agents/orchestrator/graph";
+import { ContextBootstrapSummary, PrerequisitePlanSummary, RoadmapModule } from "../agents/roadmap/state";
 import { db } from "../drizzle";
 import {
     learningModule,
@@ -52,20 +47,21 @@ export const roadmapGenerator = async (req: Request, res: Response) => {
     const threadId = uuidv4();
 
     try {
-        await roadmapGraph.invoke(
+        await orchestratorGraph.invoke(
             { messages: [new HumanMessage(topic)] },
             { configurable: { thread_id: threadId } },
         );
 
-        const snapshot = await roadmapGraph.getState({
+        const snapshot = await orchestratorGraph.getState({
             configurable: { thread_id: threadId },
         });
 
         const snapshotValues = snapshot?.values ?? {};
-        const modules = Array.isArray(snapshotValues?.modules)
-            ? (snapshotValues.modules as RoadmapModule[])
+        const modules = Array.isArray(snapshotValues?.roadmapModules)
+            ? (snapshotValues.roadmapModules as RoadmapModule[])
             : [];
 
+        // Assuming domain and other fields are passed through from roadmap subgraph
         const domain =
             typeof snapshotValues?.domain === "string" ? snapshotValues.domain : null;
         const requiresPrereqs =
@@ -80,10 +76,6 @@ export const roadmapGenerator = async (req: Request, res: Response) => {
             snapshotValues?.prerequisitePlan && typeof snapshotValues.prerequisitePlan === "object"
                 ? JSON.parse(JSON.stringify(snapshotValues.prerequisitePlan))
                 : null;
-        const graphContext =
-            snapshotValues?.graphContext && typeof snapshotValues.graphContext === "object"
-                ? JSON.parse(JSON.stringify(snapshotValues.graphContext))
-                : null;
 
         return res.json({
             success: true,
@@ -92,7 +84,6 @@ export const roadmapGenerator = async (req: Request, res: Response) => {
             domain,
             requiresPrereqs,
             bootstrapSummary,
-            graphContext,
             prerequisitePlan,
             modules,
         });
@@ -117,12 +108,7 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     const { threadId, topic, goal, difficulty, tags } = parseResult.data;
 
     const sessionId = req.cookies?.[COOKIE_SESSION_KEY];
-    if (!sessionId) {
-        return res
-            .status(StatusCodes.UNAUTHORIZED)
-            .json({ success: false, error: "Authentication required." });
-    }
-
+    
     const session = await getSession(sessionId);
     if (!session) {
         return res
@@ -134,7 +120,6 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     let domain: string | null = null;
     let requiresPrereqs: boolean | null = null;
     let bootstrapSummary: ContextBootstrapSummary | null = null;
-    let graphContext: GraphContextSnapshot | null = null;
     let prerequisitePlan: PrerequisitePlanSummary | null = null;
     let resolvedTopic = topic;
 
@@ -163,13 +148,13 @@ export const saveRoadmap = async (req: Request, res: Response) => {
     const prereqTitlePattern = /(on[-\s]?ramp|prerequisite|foundation|essentials|readiness|primer)/i;
 
     try {
-        const snapshot = await roadmapGraph.getState({
+        const snapshot = await orchestratorGraph.getState({
             configurable: { thread_id: threadId },
         });
 
         const snapshotValues = snapshot?.values ?? {};
-        if (Array.isArray(snapshotValues?.modules)) {
-            modules = snapshotValues.modules as RoadmapModule[];
+        if (Array.isArray(snapshotValues?.roadmapModules)) {
+            modules = snapshotValues.roadmapModules as RoadmapModule[];
         }
         if (typeof snapshotValues?.topic === "string" && snapshotValues.topic.trim().length > 0) {
             resolvedTopic = snapshotValues.topic.trim();
@@ -183,10 +168,6 @@ export const saveRoadmap = async (req: Request, res: Response) => {
         bootstrapSummary =
             snapshotValues?.bootstrapSummary && typeof snapshotValues.bootstrapSummary === "object"
                 ? JSON.parse(JSON.stringify(snapshotValues.bootstrapSummary))
-                : null;
-        graphContext =
-            snapshotValues?.graphContext && typeof snapshotValues.graphContext === "object"
-                ? JSON.parse(JSON.stringify(snapshotValues.graphContext))
                 : null;
         prerequisitePlan =
             snapshotValues?.prerequisitePlan && typeof snapshotValues.prerequisitePlan === "object"
@@ -367,7 +348,6 @@ export const saveRoadmap = async (req: Request, res: Response) => {
                 domain,
                 requiresPrereqs,
                 bootstrapSummary,
-                graphContext,
                 prerequisitePlan,
                 updatedAt: nowIso,
                 dependencies: dependenciesSnapshot,
@@ -412,7 +392,6 @@ export const saveRoadmap = async (req: Request, res: Response) => {
             topic: resolvedTopic,
             progress: result.progress,
             bootstrapSummary,
-            graphContext,
             prerequisitePlan,
             dependencies: result.dependencies,
             savedModules: result.insertedModules,

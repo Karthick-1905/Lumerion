@@ -48,22 +48,6 @@ Constraints: {learning_constraints}
 Preferences: {learning_preferences}
 </Learner Summary>
 
-<Knowledge Graph Focus>
-{graph_focus}
-</Knowledge Graph Focus>
-
-<Direct Prerequisites>
-{graph_direct_prereqs}
-</Direct Prerequisites>
-
-<Supporting Concepts>
-{graph_supporting_concepts}
-</Supporting Concepts>
-
-<Related Resources>
-{graph_resources}
-</Related Resources>
-
 Tasks:
 1. Order prerequisite concepts so that foundational ideas appear before advanced ones.
 2. Map each concept to a short justification referencing the graph evidence or learner needs.
@@ -103,9 +87,6 @@ Context:
 
 Prerequisite plan:
 {prerequisite_plan}
-
-Available resources with concept alignment:
-{resource_catalogue}
 
 Guidelines:
 1. Roadmap must progress Fundamentals → Core → Advanced → Projects/Integration.
