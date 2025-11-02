@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, metaSpace, metaInteractionGroup, studyNote, noteComment, metaSpaceUserPresence, metaInteractionGroupMembers, metaInteractionLog, passwordResetTokens, friendRequest, userFriend, studyGroupMembership, roadmapSession, userQuizAnswer, quizQuestion, quiz } from "./schema";
+import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, notes, media, noteMediaAlignment, passwordResetTokens, friendRequest, userFriend, studyGroupMembership, roadmapSession, userQuizAnswer, quizQuestion, quiz } from "./schema";
 
 export const moduleDependencyRelations = relations(moduleDependency, ({one}) => ({
 	learningModule: one(learningModule, {
@@ -13,7 +13,7 @@ export const learningModuleRelations = relations(learningModule, ({many}) => ({
 	moduleCitations: many(moduleCitation),
 	learningPathModules: many(learningPathModule),
 	userModuleProgresses: many(userModuleProgress),
-	studyNotes: many(studyNote),
+	studyNotes: many(notes),
 	quizzes: many(quiz),
 }));
 
@@ -30,17 +30,12 @@ export const usersRelations = relations(users, ({many}) => ({
 	learningPaths: many(learningPath),
 	userModuleProgresses: many(userModuleProgress),
 	studyGroups: many(studyGroup),
-	studyNotes_userId: many(studyNote, {
+	studyNotes_userId: many(notes, {
 		relationName: "studyNote_userId_users_userId"
 	}),
-	studyNotes_lastEditedBy: many(studyNote, {
+	studyNotes_lastEditedBy: many(notes, {
 		relationName: "studyNote_lastEditedBy_users_userId"
 	}),
-	noteComments: many(noteComment),
-	metaSpaces: many(metaSpace),
-	metaSpaceUserPresences: many(metaSpaceUserPresence),
-	metaInteractionGroupMembers: many(metaInteractionGroupMembers),
-	metaInteractionLogs: many(metaInteractionLog),
 	passwordResetTokens: many(passwordResetTokens),
 	friendRequests_senderId: many(friendRequest, {
 		relationName: "friendRequest_senderId_users_userId"
@@ -127,101 +122,61 @@ export const studyGroupRelations = relations(studyGroup, ({one, many}) => ({
 		fields: [studyGroup.pathId],
 		references: [learningPath.pathId]
 	}),
-	studyNotes: many(studyNote),
+	studyNotes: many(notes),
 	studyGroupMemberships: many(studyGroupMembership),
 }));
 
-export const metaInteractionGroupRelations = relations(metaInteractionGroup, ({one, many}) => ({
-	metaSpace: one(metaSpace, {
-		fields: [metaInteractionGroup.spaceId],
-		references: [metaSpace.spaceId]
-	}),
-	metaInteractionGroupMembers: many(metaInteractionGroupMembers),
-	metaInteractionLogs: many(metaInteractionLog),
-}));
-
-export const metaSpaceRelations = relations(metaSpace, ({one, many}) => ({
-	metaInteractionGroups: many(metaInteractionGroup),
-	user: one(users, {
-		fields: [metaSpace.createdBy],
-		references: [users.userId]
-	}),
-	metaSpaceUserPresences: many(metaSpaceUserPresence),
-}));
-
-export const studyNoteRelations = relations(studyNote, ({one, many}) => ({
+export const studyNoteRelations = relations(notes, ({one, many}) => ({
 	user_userId: one(users, {
-		fields: [studyNote.userId],
+		fields: [notes.userId],
 		references: [users.userId],
 		relationName: "studyNote_userId_users_userId"
 	}),
 	learningModule: one(learningModule, {
-		fields: [studyNote.relatedModuleId],
+		fields: [notes.relatedModuleId],
 		references: [learningModule.moduleId]
 	}),
 	studyGroup: one(studyGroup, {
-		fields: [studyNote.sharedWithGroupId],
+		fields: [notes.sharedWithGroupId],
 		references: [studyGroup.groupId]
 	}),
 	user_lastEditedBy: one(users, {
-		fields: [studyNote.lastEditedBy],
+		fields: [notes.lastEditedBy],
 		references: [users.userId],
 		relationName: "studyNote_lastEditedBy_users_userId"
 	}),
-	studyNote: one(studyNote, {
-		fields: [studyNote.forkedFromNoteId],
-		references: [studyNote.noteId],
+	studyNote: one(notes, {
+		fields: [notes.forkedFromNoteId],
+		references: [notes.noteId],
 		relationName: "studyNote_forkedFromNoteId_studyNote_noteId"
 	}),
-	studyNotes: many(studyNote, {
+	studyNotes: many(notes, {
 		relationName: "studyNote_forkedFromNoteId_studyNote_noteId"
 	}),
-	noteComments: many(noteComment),
+	mediaItems: many(media),
+	mediaAlignments: many(noteMediaAlignment),
 }));
 
-export const noteCommentRelations = relations(noteComment, ({one}) => ({
-	studyNote: one(studyNote, {
-		fields: [noteComment.noteId],
-		references: [studyNote.noteId]
+export const noteMediaRelations = relations(media, ({one, many}) => ({
+	note: one(notes, {
+		fields: [media.noteId],
+		references: [notes.noteId]
 	}),
-	user: one(users, {
-		fields: [noteComment.userId],
-		references: [users.userId]
-	}),
+	alignments: many(noteMediaAlignment),
 }));
 
-export const metaSpaceUserPresenceRelations = relations(metaSpaceUserPresence, ({one}) => ({
-	metaSpace: one(metaSpace, {
-		fields: [metaSpaceUserPresence.spaceId],
-		references: [metaSpace.spaceId]
+export const noteMediaAlignmentRelations = relations(noteMediaAlignment, ({one}) => ({
+	note: one(notes, {
+		fields: [noteMediaAlignment.noteId],
+		references: [notes.noteId]
 	}),
-	user: one(users, {
-		fields: [metaSpaceUserPresence.userId],
-		references: [users.userId]
+	media: one(media, {
+		fields: [noteMediaAlignment.mediaId],
+		references: [media.mediaId]
 	}),
 }));
 
-export const metaInteractionGroupMembersRelations = relations(metaInteractionGroupMembers, ({one}) => ({
-	metaInteractionGroup: one(metaInteractionGroup, {
-		fields: [metaInteractionGroupMembers.groupId],
-		references: [metaInteractionGroup.groupId]
-	}),
-	user: one(users, {
-		fields: [metaInteractionGroupMembers.userId],
-		references: [users.userId]
-	}),
-}));
 
-export const metaInteractionLogRelations = relations(metaInteractionLog, ({one}) => ({
-	metaInteractionGroup: one(metaInteractionGroup, {
-		fields: [metaInteractionLog.groupId],
-		references: [metaInteractionGroup.groupId]
-	}),
-	user: one(users, {
-		fields: [metaInteractionLog.userId],
-		references: [users.userId]
-	}),
-}));
 
 export const passwordResetTokensRelations = relations(passwordResetTokens, ({one}) => ({
 	user: one(users, {

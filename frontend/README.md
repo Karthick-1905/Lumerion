@@ -26,6 +26,7 @@ A modern, responsive React SPA for ADL LMS featuring beautiful UI components, re
 - **Charts & Analytics**: Beautiful data visualizations using Recharts
 - **Progress Tracking**: Visual progress bars and completion indicators
 - **Interactive Forms**: Real-time validation and user feedback
+- **Rich Text Notes**: TipTap editor with autosave and media uploads
 - **Toast Notifications**: Non-intrusive success and error messages
 
 ###  Performance
@@ -297,6 +298,16 @@ const { data: activityFeed } = useActivityFeed();
 ```typescript
 const { data: learningPaths } = useLearningPaths();
 const { data: assessments } = useSkillAssessments();
+```
+
+#### Notes
+```typescript
+const { data: note } = useQuery({
+  queryKey: ['note', noteId],
+  queryFn: () => notesApi.getNote(noteId),
+});
+
+const save = useDebouncedCallback((payload) => notesApi.updateNote(noteId, payload));
 ```
 
 ##  Contributing

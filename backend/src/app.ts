@@ -9,6 +9,7 @@ import friend_router from "./routes/friendRouter";
 import study_group_router from "./routes/studyGroupRouter";
 import AuthProvider from "./middleware/authProvider";
 import roadmap_router from "./routes/roadmapRouter";
+import notes_router from './routes/notesRouter'
 import { setupSwagger } from "./config/swagger";
 
 const app: Express = express();
@@ -35,5 +36,7 @@ app.use("/api/user",AuthProvider, user_router);
 app.use("/api/friends", AuthProvider, friend_router);
 app.use("/api/study-groups", AuthProvider, study_group_router);
 app.use("/api/roadmap", roadmap_router);
+app.use('/api/notes', AuthProvider,notes_router)
+
 
 export default app;

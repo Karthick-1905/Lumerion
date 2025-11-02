@@ -49,6 +49,12 @@ export const API_CONFIG = {
       GENERATE: '/api/roadmap/generate',
       SAVE: '/api/roadmap/save'
     },
+    NOTES: {
+      CREATE: '/api/notes',
+      DETAIL: (noteId: number | string) => `/api/notes/${noteId}`,
+      UPDATE: (noteId: number | string) => `/api/notes/${noteId}`,
+      UPLOAD_MEDIA: (noteId: number | string) => `/api/notes/${noteId}/media`,
+    },
     FRIENDS: {
       LIST: (limit?: number, offset?: number) => {
         const params = new URLSearchParams();

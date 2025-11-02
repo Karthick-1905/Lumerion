@@ -1,5 +1,5 @@
 import {QueryClientProvider, QueryClient} from '@tanstack/react-query'
-import {createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider} from 'react-router-dom'
+import {createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, RouterProvider} from 'react-router-dom'
 import Register from './pages/auth/Register'
 import Login from './pages/auth/Login'
 import VerifyEmail from './pages/auth/VerifyEmail'
@@ -19,6 +19,7 @@ import SkillAssessments from './pages/skillAssessment/SkillAssessments'
 import SkillAssessment from './pages/skillAssessment/SkillAssessment'
 import ActivityFeed from './pages/activityFeed/ActivityFeed'
 import ToastContainer from './components/ui/ToastContainer'
+import NotePage from './pages/notes/NotePage'
 
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path='/' element={<MainLayout/>}>
@@ -28,11 +29,14 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route path='/reset-password' element={<ResetPassword/>}/>
       <Route path='/profile-setup' element={<ProfileSetup/>}/>
       <Route path='/dashboard' element={<Dashboard/>}/>
-      <Route path='/learning-paths/create' element={<CreateLearningPath/>}/>
-      <Route path='/learning-path/:pathId' element={<LearningPathDetail/>}/>
-      <Route path='/study-groups' element={<MyStudyGroups/>}/>
-      <Route path='/study-groups/learning-paths/:pathId' element={<StudyGroupsList/>}/>
-      <Route path='/study-groups/:groupId' element={<StudyGroupDetail/>}/>
+      <Route path='/notes' element={<NotePage/>}/>
+      <Route path="/learning-path/create" element={<CreateLearningPath />} />
+      <Route path="/learning-path/:pathId" element={<LearningPathDetail />} />
+
+      <Route path="/study-groups" element={<MyStudyGroups />} />
+      <Route path="/study-groups/learning-paths/:pathId" element={<StudyGroupsList />} />
+      <Route path="/study-groups/:groupId" element={<StudyGroupDetail />} />
+      
       <Route path='/friends' element={<FriendsPage/>}/>
       <Route path='/profile' element={<Profile/>}/>
       <Route path='/notifications' element={<Notifications/>}/>

@@ -318,6 +318,76 @@ export interface NotificationsResponse extends SuccessResponse {
   counts: NotificationsCounts;
 }
 
+// Notes
+export interface NoteMediaAlignment {
+  alignmentId: number;
+  blockPath: string;
+  position: number;
+}
+
+export interface NoteMediaMetadata {
+  originalName: string;
+  mimeType: string;
+  size: number;
+  [key: string]: unknown;
+}
+
+export interface NoteMediaItem {
+  mediaId: number;
+  noteId: number;
+  objectKey?: string;
+  bucketName?: string;
+  url: string;
+  type: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  metadata: Record<string, unknown> | null;
+  createdAt?: string;
+  alignments?: NoteMediaAlignment[];
+}
+
+export interface Note {
+  noteId: number;
+  userId: number;
+  title: string;
+  content: unknown;
+  tags: string[] | null;
+  visibilityScope: string;
+  relatedModuleId: number | null;
+  isShared: boolean;
+  sharedWithGroupId: number | null;
+  noteType: string;
+  likeCount: number;
+  viewCount: number;
+  lastEditedBy: number | null;
+  forkedFromNoteId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  media: NoteMediaItem[];
+}
+
+export interface UpsertNotePayload {
+  title: string;
+  content: unknown;
+  tags?: string[] | null;
+}
+
+export interface CreateNoteResponse {
+  noteId: number;
+}
+
+export interface UpdateNoteResponse {
+  success: boolean;
+}
+
+export interface UploadMediaResponse {
+  mediaId: number;
+  url: string;
+  type: string;
+  metadata: NoteMediaMetadata;
+}
+
 // Public Roadmap Types
 export interface RoadmapOwner {
   userId: number;

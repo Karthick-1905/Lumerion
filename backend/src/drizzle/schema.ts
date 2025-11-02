@@ -218,38 +218,25 @@ export const studyGroup = pgTable("study_group", {
 		}).onDelete("cascade"),
 ]);
 
-export const metaInteractionGroup = pgTable("meta_interaction_group", {
-	groupId: serial("group_id").primaryKey().notNull(),
-	spaceId: integer("space_id").notNull(),
-	interactionType: interactionEnum("interaction_type").notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	endedAt: timestamp("ended_at", { mode: 'string' }),
-}, (table) => [
-	foreignKey({
-			columns: [table.spaceId],
-			foreignColumns: [metaSpace.spaceId],
-			name: "meta_interaction_group_space_id_fkey"
-		}).onDelete("cascade"),
-]);
 
-export const studyNote = pgTable("study_note", {
+export const notes = pgTable("study_note", {
 	noteId: serial("note_id").primaryKey().notNull(),
 	userId: integer("user_id").notNull(),
-	title: text().notNull(),
-	content: text(),
-	visibilityScope: visibilityScope("visibility_scope").default('private'),
+	title: text("title").notNull(),
+	content: jsonb("content").$type<unknown>(),
+	visibilityScope: text("visibility_scope").default("private"), 
 	relatedModuleId: integer("related_module_id"),
 	isShared: boolean("is_shared").default(false),
 	sharedWithGroupId: integer("shared_with_group_id"),
-	noteType: noteType("note_type").default('text'),
-	tags: jsonb(),
-	attachments: jsonb(),
+	noteType: text("note_type").default("text"),
+	tags: jsonb("tags").$type<string[] | null>(),
+	attachments: jsonb("attachments").$type<Record<string, unknown>[] | null>(),
 	likeCount: integer("like_count").default(0),
 	viewCount: integer("view_count").default(0),
 	lastEditedBy: integer("last_edited_by"),
 	forkedFromNoteId: integer("forked_from_note_id"),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow()
 }, (table) => [
 	foreignKey({
 			columns: [table.userId],
@@ -278,104 +265,44 @@ export const studyNote = pgTable("study_note", {
 		}),
 ]);
 
-export const noteComment = pgTable("note_comment", {
-	commentId: serial("comment_id").primaryKey().notNull(),
-	noteId: integer("note_id").notNull(),
-	userId: integer("user_id").notNull(),
-	commentText: text("comment_text").notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+export const media = pgTable("note_media", {
+  mediaId: serial("media_id").primaryKey().notNull(),
+  noteId: integer("note_id").notNull(),
+  objectKey: text("object_key").notNull(),
+  bucketName: text("bucket_name").notNull(),
+  url: text("url").notNull(),
+	type: text("type").notNull(),
+	originalName: text("original_name").notNull(),
+	mimeType: text("mime_type").notNull(),
+	size: integer("size").notNull(),
+	metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow()
 }, (table) => [
-	foreignKey({
-			columns: [table.noteId],
-			foreignColumns: [studyNote.noteId],
-			name: "note_comment_note_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.userId],
-			name: "note_comment_user_id_fkey"
-		}).onDelete("cascade"),
+  foreignKey({
+    columns: [table.noteId],
+    foreignColumns: [notes.noteId],
+    name: "note_media_note_id_fkey"
+  }).onDelete("cascade")
 ]);
 
-export const metaSpace = pgTable("meta_space", {
-	spaceId: serial("space_id").primaryKey().notNull(),
-	name: varchar({ length: 255 }).notNull(),
-	description: text(),
-	createdBy: integer("created_by").notNull(),
-	layoutConfig: jsonb("layout_config"),
-	isActive: boolean("is_active").default(true),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+export const noteMediaAlignment = pgTable("note_media_alignment", {
+  alignmentId: serial("alignment_id").primaryKey().notNull(),
+  noteId: integer("note_id").notNull(),
+  mediaId: integer("media_id").notNull(),
+  blockPath: text("block_path").notNull(),    // e.g., JSON-pointer path like "/blocks/3/children/0"
+  position: integer("position").notNull().default(0),  // ordering index
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow()
 }, (table) => [
-	foreignKey({
-			columns: [table.createdBy],
-			foreignColumns: [users.userId],
-			name: "meta_space_created_by_fkey"
-		}).onDelete("cascade"),
-]);
-
-export const metaSpaceUserPresence = pgTable("meta_space_user_presence", {
-	presenceId: serial("presence_id").primaryKey().notNull(),
-	spaceId: integer("space_id").notNull(),
-	userId: integer("user_id").notNull(),
-	xCoord: integer("x_coord").default(0),
-	yCoord: integer("y_coord").default(0),
-	orientation: varchar({ length: 50 }),
-	status: presenceEnum().default('online'),
-	lastUpdated: timestamp("last_updated", { mode: 'string' }).defaultNow(),
-}, (table) => [
-	foreignKey({
-			columns: [table.spaceId],
-			foreignColumns: [metaSpace.spaceId],
-			name: "meta_space_user_presence_space_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.userId],
-			name: "meta_space_user_presence_user_id_fkey"
-		}).onDelete("cascade"),
-	unique("meta_space_user_presence_space_id_user_id_key").on(table.spaceId, table.userId),
-]);
-
-export const metaInteractionGroupMembers = pgTable("meta_interaction_group_members", {
-	groupMemberId: serial("group_member_id").primaryKey().notNull(),
-	groupId: integer("group_id").notNull(),
-	userId: integer("user_id").notNull(),
-	joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow(),
-	leftAt: timestamp("left_at", { mode: 'string' }),
-}, (table) => [
-	foreignKey({
-			columns: [table.groupId],
-			foreignColumns: [metaInteractionGroup.groupId],
-			name: "meta_interaction_group_members_group_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.userId],
-			name: "meta_interaction_group_members_user_id_fkey"
-		}).onDelete("cascade"),
-	unique("meta_interaction_group_members_group_id_user_id_key").on(table.groupId, table.userId),
-]);
-
-export const metaInteractionLog = pgTable("meta_interaction_log", {
-	interactionId: serial("interaction_id").primaryKey().notNull(),
-	groupId: integer("group_id").notNull(),
-	userId: integer("user_id").notNull(),
-	actionType: actionEnum("action_type").notNull(),
-	metadata: jsonb(),
-	timestamp: timestamp({ mode: 'string' }).defaultNow(),
-}, (table) => [
-	foreignKey({
-			columns: [table.groupId],
-			foreignColumns: [metaInteractionGroup.groupId],
-			name: "meta_interaction_log_group_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.userId],
-			name: "meta_interaction_log_user_id_fkey"
-		}).onDelete("cascade"),
+  foreignKey({
+    columns: [table.noteId],
+    foreignColumns: [notes.noteId],
+    name: "nma_note_id_fkey"
+  }).onDelete("cascade"),
+  foreignKey({
+    columns: [table.mediaId],
+    foreignColumns: [media.mediaId],
+    name: "nma_media_id_fkey"
+  }).onDelete("cascade")
 ]);
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {

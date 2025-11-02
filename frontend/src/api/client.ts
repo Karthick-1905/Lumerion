@@ -18,23 +18,41 @@ export class ApiClient {
     const config: RequestInit = {
       ...options,
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
     };
 
     try {
       const response = await fetch(url, config);
       
-      // Parse response
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+      let data: unknown = null;
+
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (error) {
+          if (response.ok) {
+            data = null;
+          } else {
+            throw error;
+          }
+        }
+      } else {
+        const text = await response.text();
+        data = text.length ? text : null;
+      }
 
       // Handle non-2xx responses
       if (!response.ok) {
-        const error = new Error(data.message || 'An error occurred') as ApiError;
+        const message =
+          typeof data === 'object' && data !== null && 'message' in data
+            ? String((data as Record<string, unknown>).message)
+            : 'An error occurred';
+
+        const error = new Error(message) as ApiError;
         error.status = response.status;
-        error.response = data as ErrorResponse;
+        if (typeof data === 'object' && data !== null) {
+          error.response = data as ErrorResponse;
+        }
         throw error;
       }
 
@@ -66,10 +84,14 @@ export class ApiClient {
     body?: any,
     headers?: Record<string, string>
   ): Promise<T> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-      headers,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
     });
   }
 
@@ -79,10 +101,14 @@ export class ApiClient {
     body?: any,
     headers?: Record<string, string>
   ): Promise<T> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
-      headers,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
     });
   }
 
@@ -100,10 +126,14 @@ export class ApiClient {
     body?: any,
     headers?: Record<string, string>
   ): Promise<T> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
-      headers,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
     });
   }
 }
