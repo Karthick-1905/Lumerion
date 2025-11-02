@@ -1,5 +1,5 @@
 import {QueryClientProvider, QueryClient} from '@tanstack/react-query'
-import {createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, RouterProvider} from 'react-router-dom'
+import {createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider} from 'react-router-dom'
 import Register from './pages/auth/Register'
 import Login from './pages/auth/Login'
 import VerifyEmail from './pages/auth/VerifyEmail'

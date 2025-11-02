@@ -309,7 +309,7 @@ const LearningPathDetail = () => {
                     <span className={`px-4 py-2 rounded-xl text-sm font-medium border ${getDifficultyClasses(learningPath.difficulty)}`}>
                       {learningPath.difficulty}
                     </span>
-                    <span className="px-4 py-2 rounded-xl text-sm font-medium bg-[#7FDBCA]/10 text-[#7FDBCA] border border-[#7FDBCA]/20">
+                    <span className="px-4 py-2 rounded-xl text-sm font-medium bg-[#1B5E20]/20 text-[#4CAF50] border border-[#4CAF50]/30">
                       {learningPath.moduleCount} Modules
                     </span>
                     {progress?.domain && (
@@ -345,7 +345,7 @@ const LearningPathDetail = () => {
                   <button
                     type="button"
                     onClick={() => setIsCreateStudyGroupOpen(true)}
-                    className="px-5 py-3 rounded-xl bg-linear-to-r from-[#7FDBCA] to-[#00CC99] text-[#0B1F1A] text-sm font-semibold shadow-lg shadow-[#7FDBCA]/20 hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                    className="px-5 py-3 rounded-xl bg-linear-to-r from-[#4CAF50] to-[#2E7D32] text-white text-sm font-semibold shadow-lg shadow-[#4CAF50]/20 hover:shadow-xl hover:shadow-[#4CAF50]/30 transition-all duration-200 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -355,7 +355,7 @@ const LearningPathDetail = () => {
                   <button
                     type="button"
                     onClick={() => navigate(`/study-groups/learning-paths/${learningPath.pathId}`)}
-                    className="text-sm text-[#7FDBCA] hover:text-white transition-colors"
+                    className="text-sm text-[#4CAF50] hover:text-white transition-colors"
                   >
                     View all study groups
                   </button>
@@ -421,14 +421,14 @@ const LearningPathDetail = () => {
                     {prereqPlan.steps.map(step => (
                       <div
                         key={step.sequence}
-                        className="bg-[#242424] border border-gray-800 rounded-2xl p-5 hover:border-[#7FDBCA]/40 transition-all duration-200"
+                        className="bg-[#242424] border border-gray-800 rounded-2xl p-5 hover:border-[#4CAF50]/35 transition-all duration-200"
                       >
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
                           <div>
-                            <div className="text-xs uppercase tracking-wide text-[#7FDBCA] mb-1">Step {step.sequence}</div>
+                            <div className="text-xs uppercase tracking-wide text-[#4CAF50] mb-1">Step {step.sequence}</div>
                             <h3 className="text-lg font-semibold text-white">{step.conceptName}</h3>
                           </div>
-                          <span className="px-3 py-1 text-xs font-medium border border-[#7FDBCA]/30 text-[#7FDBCA] rounded-full">
+                          <span className="px-3 py-1 text-xs font-medium border border-[#4CAF50]/30 text-[#4CAF50] rounded-full">
                             {step.categorisation}
                           </span>
                         </div>
@@ -454,7 +454,7 @@ const LearningPathDetail = () => {
             </div>
 
             <div className="relative">
-              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-linear-to-b from-[#7FDBCA] via-[#00CC99] to-transparent"></div>
+              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-linear-to-b from-[#4CAF50] via-[#2E7D32] to-transparent"></div>
 
               <div className="space-y-8">
                 {learningPath.modules.map((module: Module, moduleIndex: number) => {
@@ -487,9 +487,9 @@ const LearningPathDetail = () => {
                     <div key={module.moduleId} className="relative pl-20">
                       <div className={`absolute left-0 w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-lg border-4 border-[#1E1E1E] transition-all duration-300 ${
                         isCompleted
-                          ? 'bg-linear-to-br from-[#7FDBCA] to-[#00CC99] text-white shadow-lg shadow-[#7FDBCA]/30'
+                          ? 'bg-linear-to-br from-[#4CAF50] to-[#2E7D32] text-white shadow-lg shadow-[#4CAF50]/30'
                           : isInProgress
-                          ? 'bg-[#242424] text-[#7FDBCA] border-[#7FDBCA]'
+                          ? 'bg-[#242424] text-[#4CAF50] border-[#4CAF50]'
                           : 'bg-[#242424] text-gray-500 border-gray-700'
                       }`}>
                         {isCompleted ? (
@@ -501,11 +501,11 @@ const LearningPathDetail = () => {
                         )}
                       </div>
 
-                      <div className="rounded-3xl border border-gray-400 p-6 transition-all duration-300 hover:border-[#7FDBCA]/50 hover:shadow-lg hover:shadow-[#7FDBCA]/15 group">
+                      <div className="rounded-3xl border border-gray-400 p-6 transition-all duration-300 hover:border-[#4CAF50]/40 hover:shadow-lg hover:shadow-[#4CAF50]/15 group">
                         <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                           <div className="flex-1">
                             <div className="mb-3 flex flex-wrap items-center gap-3">
-                              <h3 className="text-2xl font-semibold text-white group-hover:text-[#7FDBCA] transition-colors">
+                              <h3 className="text-2xl font-semibold text-white group-hover:text-[#4CAF50] transition-colors">
                               {module.title}
                             </h3>
                               <span
@@ -557,7 +557,7 @@ const LearningPathDetail = () => {
                               disabled={!canStartQuiz}
                               className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                                 canStartQuiz
-                                  ? 'border-[#7FDBCA]/40 bg-[#13231d] text-[#7FDBCA] hover:border-[#7FDBCA]/60 hover:bg-[#183028]'
+                                  ? 'border-[#4CAF50]/40 bg-[#16391f] text-[#4CAF50] hover:border-[#4CAF50]/60 hover:bg-[#1F4E2A]'
                                   : 'cursor-not-allowed border-gray-800 bg-[#0b1511] text-gray-500'
                               }`}
                             >
@@ -588,13 +588,13 @@ const LearningPathDetail = () => {
                               <span className="text-xs font-medium uppercase tracking-[0.2em] text-[#7FDBCA]/70">Module Progress</span>
                               <span className="mt-1 block text-sm text-gray-300">{moduleStatus}</span>
                             </div>
-                            <span className="text-sm font-semibold text-[#7FDBCA]">
+                            <span className="text-sm font-semibold text-[#4CAF50]">
                               {moduleCompletionPercent}%
                             </span>
                           </div>
-                          <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#0b1511]">
+                          <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#102016]">
                             <div
-                              className="h-full rounded-full bg-[#00cc99] transition-all duration-500"
+                              className="h-full rounded-full bg-[#4CAF50] transition-all duration-500"
                               style={{ width: `${moduleCompletionPercent}%` }}
                             />
                           </div>
@@ -605,7 +605,7 @@ const LearningPathDetail = () => {
 
                         {moduleDependencies.length > 0 && (
                           <div className="mb-5 rounded-2xl border border-gray-800/70 bg-[#111b16] p-5">
-                            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#7FDBCA]/70">Dependencies</div>
+                            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#4CAF50]/70">Dependencies</div>
                             <div className="space-y-3">
                               {moduleDependencies.map(dependency => {
                                 const prerequisiteTitles = dependency.prerequisiteModuleIds.map(id => moduleTitleMap.get(id) ?? `Module ${id}`);
@@ -614,7 +614,7 @@ const LearningPathDetail = () => {
                                   <div key={`${module.moduleId}-dependency-${dependency.moduleId}-${dependency.dependencyType}`} className="space-y-2 text-xs text-gray-300">
                                     <div className="flex items-center justify-between gap-3">
                                       <div className="font-semibold capitalize text-gray-200">{dependency.dependencyType ?? 'Dependency'}</div>
-                                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${dependency.isOptional ? 'border-gray-700 text-gray-300' : 'border-[#7FDBCA]/40 text-[#7FDBCA]'}`}>
+                                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${dependency.isOptional ? 'border-gray-700 text-gray-300' : 'border-[#4CAF50]/40 text-[#4CAF50]'}`}>
                                         {dependency.isOptional ? 'Optional' : 'Required'}
                                       </span>
                                     </div>
@@ -647,18 +647,18 @@ const LearningPathDetail = () => {
                                 key={lessonIndex}
                                 className={`rounded-2xl border transition-all duration-200 p-4 sm:p-5 ${
                                   lessonIsCompleted
-                                    ? 'border-[#00cc99]/40'
-                                    : 'border-gray-700 hover:border-[#7FDBCA]/40'
+                                    ? 'border-[#4CAF50]/40'
+                                    : 'border-gray-700 hover:border-[#4CAF50]/35'
                                 }`}
                               >
                               <div className="flex items-start gap-3">
                                 <button
                                   type="button"
                                   onClick={() => handleLessonToggle(module, lessonIndex)}
-                                  className={`shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#00cc99]/40 ${
+                                  className={`shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4CAF50]/35 ${
                                     lessonIsCompleted
-                                      ? 'border-[#00cc99] bg-[#00cc99] text-[#0b1f1a] shadow-lg shadow-[#00cc99]/30'
-                                      : 'border-gray-700 text-secondary hover:border-[#7FDBCA] hover:text-[#7FDBCA]'
+                                      ? 'border-[#4CAF50] bg-[#4CAF50] text-[#0B1F1A] shadow-lg shadow-[#4CAF50]/30'
+                                      : 'border-gray-700 text-secondary hover:border-[#4CAF50] hover:text-[#4CAF50]'
                                   }`}
                                 >
                                   {lessonIsCompleted ? (

@@ -102,7 +102,7 @@ export default function Sidebar() {
       <div className="p-6 flex items-center justify-between border-b border-primary bg-primary/80 backdrop-blur-sm">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-linear-to-br from-[#1B5E20] to-[#2E7D32] rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
@@ -116,7 +116,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-11 h-11 rounded-xl border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-primary hover:border-accent transition-all duration-200"
+            className="w-11 h-11 rounded-xl border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-primary hover:border-[#4CAF50] transition-all duration-200"
           >
             <svg
               className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
@@ -138,7 +138,7 @@ export default function Sidebar() {
             to={item.path}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
               isActive(item.path)
-                ? 'bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-white shadow-lg shadow-accent'
+                ? 'bg-linear-to-r from-[#4CAF50] to-[#2E7D32] text-white shadow-lg shadow-[#4CAF50]/35'
                 : 'text-tertiary hover:bg-hover hover:text-primary'
             }`}
           >
@@ -171,10 +171,10 @@ export default function Sidebar() {
             <img
               src={profile.avatarPublicUrl}
               alt={profile.userName}
-              className="w-10 h-10 rounded-full object-cover border border-accent/30"
+              className="w-10 h-10 rounded-full object-cover border border-[#4CAF50]/30"
             />
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-10 h-10 bg-linear-to-br from-[#1B5E20] to-[#2E7D32] rounded-full flex items-center justify-center text-white font-bold text-sm">
               {getInitials(profile?.userName)}
             </div>
           )}

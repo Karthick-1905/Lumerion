@@ -43,7 +43,7 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-[#050507] via-[#0F1015] to-[#15161D] flex items-center justify-center px-4 py-12">
+    <div className="h-screen bg-linear-to-br from-[#050507] via-[#0F1015] to-[#15161D] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-6xl flex flex-col md:flex-row rounded-[36px] overflow-hidden shadow-[0_38px_86px_rgba(3,3,6,0.65)]">
         <LoginHero />
         <LoginForm

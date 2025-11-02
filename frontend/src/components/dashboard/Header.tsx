@@ -70,7 +70,7 @@ export default function DashboardHeader({
           <button
             type="button"
             onClick={onCreateLearningPath}
-            className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-sm font-semibold text-[#0B1F1A] shadow-lg shadow-[#7FDBCA]/20 hover:shadow-xl transition-all duration-200"
+            className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-[#4CAF50] to-[#2E7D32] text-sm font-semibold text-white shadow-lg shadow-[#4CAF50]/25 hover:shadow-xl hover:shadow-[#4CAF50]/35 transition-all duration-200"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -84,7 +84,7 @@ export default function DashboardHeader({
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(prev => !prev)}
-              className="w-11 h-11 rounded-xl border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-primary hover:border-accent transition-all duration-200"
+              className="w-11 h-11 rounded-xl border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-[#4CAF50] hover:border-[#4CAF50] transition-all duration-200"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-4.977M13 21a2 2 0 01-4 0" />
@@ -107,12 +107,12 @@ export default function DashboardHeader({
             <button
               type="button"
               onClick={() => setIsProfileMenuOpen(prev => !prev)}
-              className="flex items-center gap-2 px-2 py-1 rounded-2xl border border-primary bg-secondary hover:border-accent transition-all duration-200"
+              className="flex items-center gap-2 px-2 py-1 rounded-2xl border border-primary bg-secondary hover:border-[#4CAF50] transition-all duration-200"
             >
               {avatarUrl ? (
                 <img src={avatarUrl} alt={userName} className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7FDBCA] to-[#00CC99] flex items-center justify-center text-sm font-semibold text-[#0B1F1A]">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-[#1B5E20] to-[#2E7D32] flex items-center justify-center text-sm font-semibold text-[#E8F5E9]">
                   {getInitials(userName)}
                 </div>
               )}
