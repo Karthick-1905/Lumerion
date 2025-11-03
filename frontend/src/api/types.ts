@@ -417,6 +417,9 @@ export interface Note {
   forkedFromNoteId: number | null;
   createdAt: string;
   updatedAt: string;
+  collaborationEnabled?: boolean;
+  collaborationRoom?: string | null;
+  collaborationLastSyncedAt?: string | null;
   media: NoteMediaItem[];
 }
 
@@ -428,6 +431,7 @@ export interface UpsertNotePayload {
 
 export interface CreateNoteResponse {
   noteId: number;
+  collaborationRoom?: string | null;
 }
 
 export interface UpdateNoteResponse {
@@ -724,7 +728,19 @@ export interface ActivityItem {
   createdAt: string;
 }
 
-export interface ActivityFeedResponse extends SuccessResponse {
-  activities: ActivityItem[];
+export interface StudyGroupNotesResponse extends SuccessResponse {
+  notes: Note[];
+}
+
+export interface CreateStudyGroupNotePayload {
+  title: string;
+  content?: unknown;
+  tags?: string[];
+  visibilityScope?: 'private' | 'group' | 'public';
+}
+
+export interface UpdateNoteSharingPayload {
+  visibilityScope: 'private' | 'group' | 'public';
+  groupId?: number;
 }
 

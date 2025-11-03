@@ -1,15 +1,20 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   EditorContent,
   EditorContext,
   useEditor,
   type JSONContent,
 } from "@tiptap/react"
+import type { Extensions } from "@tiptap/core"
+import Collaboration from "@tiptap/extension-collaboration"
+import CollaborationCursor from "@tiptap/extension-collaboration-cursor"
+import * as Y from "yjs"
+import { WebsocketProvider } from "y-websocket"
 
 // --- Tiptap Core Extensions ---
-import { StarterKit } from "@tiptap/starter-kit"
+import { StarterKit, type StarterKitOptions } from "@tiptap/starter-kit"
 import { Image as TiptapImage } from "@tiptap/extension-image"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { TextAlign } from "@tiptap/extension-text-align"
@@ -81,6 +86,99 @@ type UploadHandler = (
   signal?: AbortSignal
 ) => Promise<string>
 
+type CollaborationUser = {
+  id?: string
+  name?: string
+  color?: string
+}
+
+export type CollaborationConfig = {
+  enabled: boolean
+  serverUrl: string
+  documentName: string
+  token?: string
+  field?: string
+  params?: Record<string, string>
+  user?: CollaborationUser
+}
+
+const CURSOR_COLOR_PALETTE = [
+  "#0ea5e9",
+  "#ec4899",
+  "#10b981",
+  "#f97316",
+  "#8b5cf6",
+  "#facc15",
+] as const
+
+const DEFAULT_COLLAB_USER_NAME = "Anonymous"
+const DEFAULT_COLLAB_FIELD = "content"
+
+const debugLog = (...args: unknown[]) => {
+  if (typeof window !== "undefined" && window?.console) {
+    console.debug("[SimpleEditor]", ...args)
+  }
+}
+
+const hashString = (value: string) => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+const resolveUserColor = (user?: CollaborationUser) => {
+  if (user?.color) return user.color
+  const seedSource = user?.id ?? user?.name ?? Math.random().toString(36).slice(2)
+  const paletteIndex = hashString(seedSource) % CURSOR_COLOR_PALETTE.length
+  return CURSOR_COLOR_PALETTE[paletteIndex]
+}
+
+const serializeParams = (params?: Record<string, string>) => {
+  if (!params) return ""
+  return Object.keys(params)
+    .sort()
+    .map((key) => `${key}:${params[key] ?? ""}`)
+    .join("|")
+}
+
+const buildCollaborationSignature = (config?: CollaborationConfig) => {
+  if (!config) return "::none"
+  return [
+    config.enabled ? "1" : "0",
+    config.serverUrl ?? "",
+    config.documentName ?? "",
+    config.token ?? "",
+    config.field ?? "",
+    serializeParams(config.params),
+    config.user?.id ?? "",
+    config.user?.name ?? "",
+    config.user?.color ?? "",
+  ].join("::")
+}
+
+const useStableCollaborationConfig = (config?: CollaborationConfig) => {
+  const signature = useMemo(() => buildCollaborationSignature(config), [config])
+  const storedConfigRef = useRef(config)
+  const storedSignatureRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (signature === storedSignatureRef.current) {
+      return
+    }
+    debugLog("collaboration config updated", {
+      previousSignature: storedSignatureRef.current,
+      nextSignature: signature,
+    })
+    storedSignatureRef.current = signature
+    storedConfigRef.current = config
+  }, [config, signature])
+
+  return storedConfigRef.current
+}
+
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
@@ -127,27 +225,34 @@ type SimpleEditorProps = {
   disabled?: boolean
   statusTone?: "idle" | "saving" | "queued" | "error"
   onUploadMedia?: UploadHandler
+  collaborationConfig?: CollaborationConfig
 }
 
 const MainToolbarContent = ({
   onHighlighterClick,
   onLinkClick,
   isMobile,
+  showUndoRedo = true,
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
   isMobile: boolean
+  showUndoRedo?: boolean
 }) => {
   return (
     <>
       <Spacer />
 
-      <ToolbarGroup>
-        <UndoRedoButton action="undo" />
-        <UndoRedoButton action="redo" />
-      </ToolbarGroup>
+      {showUndoRedo && (
+        <>
+          <ToolbarGroup>
+            <UndoRedoButton action="undo" />
+            <UndoRedoButton action="redo" />
+          </ToolbarGroup>
 
-      <ToolbarSeparator />
+          <ToolbarSeparator />
+        </>
+      )}
 
       <ToolbarGroup>
         <HeadingDropdownMenu levels={[1, 2, 3, 4]} portal={isMobile} />
@@ -237,7 +342,7 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor({
+const SimpleEditorComponent = ({
   title = "",
   onTitleChange,
   content,
@@ -247,14 +352,14 @@ export function SimpleEditor({
   disabled = false,
   statusTone = "idle",
   onUploadMedia,
-}: SimpleEditorProps) {
+  collaborationConfig,
+}: SimpleEditorProps) => {
   const isMobile = useIsMobile()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">(
     "main"
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const initialContent = useMemo(() => content ?? (defaultContent as JSONContent), [content])
   const onContentChangeRef = useRef<typeof onContentChange>(undefined)
   const uploadMedia = onUploadMedia ?? (async (file, onProgress, signal) => {
     return handleImageUpload(file, onProgress, signal)
@@ -277,11 +382,179 @@ export function SimpleEditor({
     [statusTone]
   )
 
+  const stableCollaborationConfig = useStableCollaborationConfig(collaborationConfig)
+
+  const isCollaborationEnabled = Boolean(
+    stableCollaborationConfig?.enabled &&
+      stableCollaborationConfig.serverUrl &&
+      stableCollaborationConfig.documentName
+  )
+
+  const collabParamsKey = useMemo(
+    () => JSON.stringify(stableCollaborationConfig?.params ?? {}),
+    [stableCollaborationConfig?.params]
+  )
+
+  const collaborationRuntime = useMemo(() => {
+    if (!isCollaborationEnabled || typeof window === "undefined" || !stableCollaborationConfig) return null
+    const doc = new Y.Doc()
+    const params = {
+      ...(stableCollaborationConfig.token ? { token: stableCollaborationConfig.token } : {}),
+      ...(stableCollaborationConfig.params ?? {}),
+    }
+    const provider = new WebsocketProvider(
+      stableCollaborationConfig.serverUrl,
+      stableCollaborationConfig.documentName,
+      doc,
+      {
+        connect: true,
+        params: Object.keys(params).length ? params : undefined,
+      }
+    )
+    return { doc, provider }
+  }, [stableCollaborationConfig?.serverUrl, stableCollaborationConfig?.documentName, collabParamsKey])
+
+  const initialContentRef = useRef<JSONContent | null>(null)
+  // Ensure we only apply `content` prop once if not collab
+  useEffect(() => {
+    if (!isCollaborationEnabled) {
+      initialContentRef.current = content ?? (defaultContent as JSONContent)
+    }
+  }, [content, isCollaborationEnabled])
+
+  const stableExtensions = useMemo(() => {
+    // compute the extensions array once and store it
+    const list: Extensions = []
+    const starterKitOptions: Partial<StarterKitOptions> & { history?: boolean } = {
+      horizontalRule: false,
+      link: { openOnClick: false, enableClickSelection: true },
+    }
+    if (isCollaborationEnabled) {
+      starterKitOptions.history = false
+    }
+    list.push(StarterKit.configure(starterKitOptions))
+    list.push(HorizontalRule)
+    list.push(TextAlign.configure({ types: ["heading","paragraph"] }))
+    list.push(TaskList)
+    list.push(TaskItem.configure({ nested: true }))
+    list.push(Highlight.configure({ multicolor: true }))
+    list.push(ImageExtension)
+    list.push(Typography)
+    list.push(Superscript)
+    list.push(Subscript)
+    list.push(Selection)
+    list.push(
+      ImageUploadNode.configure({
+        accept: "image/*",
+        maxSize: MAX_FILE_SIZE,
+        limit: 3,
+        upload: onUploadMedia ?? (async (file, onProgress, signal) => {
+          return handleImageUpload(file, onProgress, signal)
+        }),
+        onError: (error: Error) => console.error("Upload failed:", error),
+      })
+    )
+    if (collaborationRuntime) {
+      list.push(Collaboration.configure({
+        document: collaborationRuntime.doc,
+        field: stableCollaborationConfig?.field ?? DEFAULT_COLLAB_FIELD,
+      }))
+      list.push(CollaborationCursor.configure({
+        provider: collaborationRuntime.provider,
+        user: {
+          id: stableCollaborationConfig?.user?.id,
+          name: stableCollaborationConfig?.user?.name ?? DEFAULT_COLLAB_USER_NAME,
+          color: resolveUserColor(stableCollaborationConfig?.user),
+        }
+      }))
+    }
+    return list
+  }, [isCollaborationEnabled, collaborationRuntime, stableCollaborationConfig?.field, stableCollaborationConfig?.user, onUploadMedia])
+
+  const [collaborationStatus, setCollaborationStatus] = useState<
+    "connecting" | "connected" | "disconnected"
+  >(isCollaborationEnabled ? "connecting" : "disconnected")
+
+  useEffect(() => {
+    if (!collaborationRuntime) {
+      setCollaborationStatus(isCollaborationEnabled ? "connecting" : "disconnected")
+      return
+    }
+
+    const { provider } = collaborationRuntime
+    debugLog("registered collaboration provider status listener")
+    const handleStatus = ({ status }: { status: "connecting" | "connected" | "disconnected" }) => {
+      debugLog("collaboration status", status)
+      setCollaborationStatus(status)
+    }
+
+    provider.on("status", handleStatus)
+
+    return () => {
+      debugLog("unregistering collaboration provider status listener")
+      provider.off("status", handleStatus)
+    }
+  }, [collaborationRuntime, isCollaborationEnabled])
+
+  useEffect(() => {
+    if (!collaborationRuntime) {
+      return
+    }
+
+    const { provider, doc } = collaborationRuntime
+
+    const userState = {
+      id: stableCollaborationConfig?.user?.id,
+      name: stableCollaborationConfig?.user?.name ?? DEFAULT_COLLAB_USER_NAME,
+      color: resolveUserColor(stableCollaborationConfig?.user),
+    }
+
+    debugLog("setting local collaboration state", userState)
+    provider.awareness.setLocalStateField("user", userState)
+
+    return () => {
+      debugLog("destroying collaboration runtime")
+      provider.destroy()
+      doc.destroy()
+    }
+  }, [collaborationRuntime, stableCollaborationConfig?.user])
+
+  const displayStatusMessage = useMemo(() => {
+    if (!isCollaborationEnabled) {
+      return statusMessage
+    }
+
+    const collaborationLabel =
+      collaborationStatus === "connected"
+        ? "Collaboration synced"
+        : collaborationStatus === "connecting"
+          ? "Collaboration connecting…"
+          : "Collaboration offline"
+
+    if (!statusMessage) {
+      return collaborationLabel
+    }
+
+    return `${statusMessage} • ${collaborationLabel}`
+  }, [collaborationStatus, isCollaborationEnabled, statusMessage])
+
+  const collabInitialContentAppliedRef = useRef(false)
+  const hasEmittedContentUpdateRef = useRef(false)
+
+  useEffect(() => {
+    collabInitialContentAppliedRef.current = false
+    hasEmittedContentUpdateRef.current = false
+    debugLog("reset collaboration initial content flags")
+  }, [collaborationRuntime])
+
   useEffect(() => {
     onContentChangeRef.current = onContentChange
+    debugLog("onContentChange handler updated", Boolean(onContentChange))
   }, [onContentChange])
 
   const editor = useEditor({
+    extensions: stableExtensions,
+    content: !isCollaborationEnabled ? initialContentRef.current ?? undefined : undefined,
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
     editorProps: {
@@ -295,59 +568,76 @@ export function SimpleEditor({
       handlePaste: (_view, event) => {
         const clipboard = event.clipboardData
         if (!clipboard) return false
-
-        const filesFromItems = Array.from(clipboard.items ?? [])
-          .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
-          .map((item) => item.getAsFile())
+        const files = Array.from(clipboard.items ?? [])
+          .filter(item => item.kind === "file" && item.type.startsWith("image/"))
+          .map(item => item.getAsFile())
           .filter((file): file is File => Boolean(file))
-
-        const filesFromList = Array.from(clipboard.files ?? []).filter((file) =>
-          file.type.startsWith("image/")
-        )
-
-        const files = filesFromItems.length ? filesFromItems : filesFromList
-
         if (!files.length) {
           return false
         }
-
         event.preventDefault()
         void processPastedImagesRef.current(files)
         return true
-      },
+      }
     },
-    extensions: [
-      StarterKit.configure({
-        horizontalRule: false,
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
-        },
-      }),
-      HorizontalRule,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      ImageExtension,
-      Typography,
-      Superscript,
-      Subscript,
-      Selection,
-      ImageUploadNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: uploadMedia,
-        onError: (error: Error) => console.error("Upload failed:", error),
-      }),
-    ],
-    content: initialContent,
     onUpdate: ({ editor }) => {
-      const nextContent = editor.getJSON()
-      onContentChangeRef.current?.(nextContent)
-    },
-  })
+      if (!hasEmittedContentUpdateRef.current) {
+        hasEmittedContentUpdateRef.current = true
+        return
+      }
+      const next = editor.getJSON()
+      onContentChangeRef.current?.(next)
+    }
+  }, [])  // <-- empty dependency array ensures one-time init
+
+  useEffect(() => {
+    if (editor) {
+      debugLog("editor instance ready", {
+        hasCollaboration: Boolean(collaborationRuntime),
+        isCollaborationEnabled,
+      })
+    }
+  }, [editor, collaborationRuntime, isCollaborationEnabled])
+
+  useEffect(() => {
+    if (
+      !isCollaborationEnabled ||
+      !editor ||
+      !collaborationRuntime ||
+      collabInitialContentAppliedRef.current
+    ) {
+      return
+    }
+
+    const fieldName = stableCollaborationConfig?.field ?? DEFAULT_COLLAB_FIELD
+    const metaMap = collaborationRuntime.doc.getMap("meta") as Y.Map<unknown>
+    const yXmlFragment = collaborationRuntime.doc.getXmlFragment(fieldName)
+    const alreadyLoaded = metaMap.get("initialContentLoaded") === true
+
+    if (alreadyLoaded || yXmlFragment.length > 0) {
+      collabInitialContentAppliedRef.current = true
+      return
+    }
+
+    const initial = content ?? (defaultContent as JSONContent)
+    if (!initial) {
+      return
+    }
+
+  debugLog("applying initial collaboration content", {
+      hasInitial: Boolean(initial),
+      emitUpdate: false,
+    })
+    editor.commands.setContent(initial, { emitUpdate: false })
+    metaMap.set("initialContentLoaded", true)
+    collabInitialContentAppliedRef.current = true
+  }, [
+    stableCollaborationConfig?.field,
+    collaborationRuntime,
+    content,
+    editor,
+    isCollaborationEnabled,
+  ])
 
   const updateImageAttributes = useCallback(
     (uploadId: string, attrs: Record<string, unknown>) => {
@@ -483,7 +773,7 @@ export function SimpleEditor({
   }, [isMobile, mobileView])
 
   useEffect(() => {
-    if (!editor || !content) {
+    if (isCollaborationEnabled || !editor || !content) {
       return
     }
 
@@ -496,7 +786,7 @@ export function SimpleEditor({
         emitUpdate: false,
       })
     }
-  }, [content, editor])
+  }, [content, editor, isCollaborationEnabled])
 
   useEffect(() => {
     if (editor) {
@@ -518,8 +808,9 @@ export function SimpleEditor({
           className={statusClassName}
           aria-live="polite"
           data-status={statusTone}
+          data-collaboration-status={isCollaborationEnabled ? collaborationStatus : undefined}
         >
-          {statusMessage ?? (isSaving ? "Saving…" : "Saved")}
+          {displayStatusMessage ?? (isSaving ? "Saving…" : "Saved")}
         </span>
       </div>
       <EditorContext.Provider value={{ editor }}>
@@ -538,6 +829,7 @@ export function SimpleEditor({
               onHighlighterClick={() => setMobileView("highlighter")}
               onLinkClick={() => setMobileView("link")}
               isMobile={isMobile}
+              showUndoRedo={!isCollaborationEnabled}
             />
           ) : (
             <MobileToolbarContent
@@ -556,3 +848,5 @@ export function SimpleEditor({
     </div>
   )
 }
+
+export const SimpleEditor = memo(SimpleEditorComponent)

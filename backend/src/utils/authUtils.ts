@@ -3,7 +3,6 @@ import crypto from 'crypto'
 import { z } from "zod"
 import {client} from './redisClient'
 
-
 const sessionSchema = z.object({
   id: z.string(),
   userId: z.number(),

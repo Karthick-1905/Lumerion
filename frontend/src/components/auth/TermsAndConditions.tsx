@@ -1,5 +1,3 @@
-import React from 'react';
-
 type TermsAndConditionsProps = {
   onAcceptChange?: (checked: boolean) => void;
   onMarketingChange?: (checked: boolean) => void;

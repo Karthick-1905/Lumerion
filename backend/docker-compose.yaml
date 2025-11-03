@@ -1,7 +1,6 @@
 services:
   minio:
     image: quay.io/minio/minio:latest
-
     container_name: notes_storage
     volumes:
       - ./data:/data    

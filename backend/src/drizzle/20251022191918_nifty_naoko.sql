@@ -1,0 +1,2 @@
+-- Empty migration to fix missing file
+-- This migration was tracked but the file was missing

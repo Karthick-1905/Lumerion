@@ -31,7 +31,7 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route path='/reset-password' element={<ResetPassword/>}/>
       <Route path='/profile-setup' element={<ProfileSetup/>}/>
       <Route path='/dashboard' element={<Dashboard/>}/>
-      <Route path='/notes' element={<NotePage/>}/>
+      <Route path='/notes/:noteId' element={<NotePage/>}/>
       <Route path="/learning-path/create" element={<CreateLearningPath />} />
       <Route path="/learning-path/:pathId" element={<LearningPathDetail />} />
 

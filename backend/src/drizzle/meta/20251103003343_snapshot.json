@@ -1,6 +1,6 @@
 {
-  "id": "2d1d7d69-54c7-4e99-94c2-201fc558e4c8",
-  "prevId": "76549e63-82ab-439c-a808-1992b9efe33b",
+  "id": "68d7a4cf-264f-408b-8b50-e0c9488c4923",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -150,6 +150,79 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.checkpoint_writes": {
+      "name": "checkpoint_writes",
+      "schema": "",
+      "columns": {
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkpoint_ns": {
+          "name": "checkpoint_ns",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "checkpoint_id": {
+          "name": "checkpoint_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idx": {
+          "name": "idx",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blob": {
+          "name": "blob",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "checkpoint_writes_pkey": {
+          "name": "checkpoint_writes_pkey",
+          "columns": [
+            "thread_id",
+            "checkpoint_ns",
+            "checkpoint_id",
+            "task_id",
+            "idx"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -469,12 +542,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "thread_id": {
-          "name": "thread_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "progress": {
           "name": "progress",
           "type": "jsonb",
@@ -501,14 +568,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "visibility": {
-          "name": "visibility",
-          "type": "visibility_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'private'"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -522,6 +581,20 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "visibility_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'private'"
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -647,171 +720,61 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.meta_interaction_group": {
-      "name": "meta_interaction_group",
+    "public.note_media": {
+      "name": "note_media",
       "schema": "",
       "columns": {
-        "group_id": {
-          "name": "group_id",
+        "media_id": {
+          "name": "media_id",
           "type": "serial",
           "primaryKey": true,
           "notNull": true
         },
-        "space_id": {
-          "name": "space_id",
+        "note_id": {
+          "name": "note_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "interaction_type": {
-          "name": "interaction_type",
-          "type": "interaction_enum",
-          "typeSchema": "public",
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
+        "bucket_name": {
+          "name": "bucket_name",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "ended_at": {
-          "name": "ended_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "meta_interaction_group_space_id_fkey": {
-          "name": "meta_interaction_group_space_id_fkey",
-          "tableFrom": "meta_interaction_group",
-          "tableTo": "meta_space",
-          "columnsFrom": [
-            "space_id"
-          ],
-          "columnsTo": [
-            "space_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.meta_interaction_group_members": {
-      "name": "meta_interaction_group_members",
-      "schema": "",
-      "columns": {
-        "group_member_id": {
-          "name": "group_member_id",
-          "type": "serial",
-          "primaryKey": true,
           "notNull": true
         },
-        "group_id": {
-          "name": "group_id",
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_name": {
+          "name": "original_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size": {
+          "name": "size",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "joined_at": {
-          "name": "joined_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "left_at": {
-          "name": "left_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "meta_interaction_group_members_group_id_fkey": {
-          "name": "meta_interaction_group_members_group_id_fkey",
-          "tableFrom": "meta_interaction_group_members",
-          "tableTo": "meta_interaction_group",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "group_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "meta_interaction_group_members_user_id_fkey": {
-          "name": "meta_interaction_group_members_user_id_fkey",
-          "tableFrom": "meta_interaction_group_members",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "meta_interaction_group_members_group_id_user_id_key": {
-          "name": "meta_interaction_group_members_group_id_user_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "group_id",
-            "user_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.meta_interaction_log": {
-      "name": "meta_interaction_log",
-      "schema": "",
-      "columns": {
-        "interaction_id": {
-          "name": "interaction_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "group_id": {
-          "name": "group_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "action_type": {
-          "name": "action_type",
-          "type": "action_enum",
-          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -821,116 +784,25 @@
           "primaryKey": false,
           "notNull": false
         },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "meta_interaction_log_group_id_fkey": {
-          "name": "meta_interaction_log_group_id_fkey",
-          "tableFrom": "meta_interaction_log",
-          "tableTo": "meta_interaction_group",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "group_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "meta_interaction_log_user_id_fkey": {
-          "name": "meta_interaction_log_user_id_fkey",
-          "tableFrom": "meta_interaction_log",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.meta_space": {
-      "name": "meta_space",
-      "schema": "",
-      "columns": {
-        "space_id": {
-          "name": "space_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "layout_config": {
-          "name": "layout_config",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "meta_space_created_by_fkey": {
-          "name": "meta_space_created_by_fkey",
-          "tableFrom": "meta_space",
-          "tableTo": "users",
+        "note_media_note_id_fkey": {
+          "name": "note_media_note_id_fkey",
+          "tableFrom": "note_media",
+          "tableTo": "study_note",
           "columnsFrom": [
-            "created_by"
+            "note_id"
           ],
           "columnsTo": [
-            "user_id"
+            "note_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -938,108 +810,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.meta_space_user_presence": {
-      "name": "meta_space_user_presence",
-      "schema": "",
-      "columns": {
-        "presence_id": {
-          "name": "presence_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "space_id": {
-          "name": "space_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "x_coord": {
-          "name": "x_coord",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "y_coord": {
-          "name": "y_coord",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "orientation": {
-          "name": "orientation",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "presence_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'online'"
-        },
-        "last_updated": {
-          "name": "last_updated",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "meta_space_user_presence_space_id_fkey": {
-          "name": "meta_space_user_presence_space_id_fkey",
-          "tableFrom": "meta_space_user_presence",
-          "tableTo": "meta_space",
-          "columnsFrom": [
-            "space_id"
-          ],
-          "columnsTo": [
-            "space_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "meta_space_user_presence_user_id_fkey": {
-          "name": "meta_space_user_presence_user_id_fkey",
-          "tableFrom": "meta_space_user_presence",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "meta_space_user_presence_space_id_user_id_key": {
-          "name": "meta_space_user_presence_space_id_user_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "space_id",
-            "user_id"
-          ]
-        }
-      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1177,12 +947,12 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.note_comment": {
-      "name": "note_comment",
+    "public.note_media_alignment": {
+      "name": "note_media_alignment",
       "schema": "",
       "columns": {
-        "comment_id": {
-          "name": "comment_id",
+        "alignment_id": {
+          "name": "alignment_id",
           "type": "serial",
           "primaryKey": true,
           "notNull": true
@@ -1193,17 +963,185 @@
           "primaryKey": false,
           "notNull": true
         },
+        "media_id": {
+          "name": "media_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_path": {
+          "name": "block_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "nma_note_id_fkey": {
+          "name": "nma_note_id_fkey",
+          "tableFrom": "note_media_alignment",
+          "tableTo": "study_note",
+          "columnsFrom": [
+            "note_id"
+          ],
+          "columnsTo": [
+            "note_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "nma_media_id_fkey": {
+          "name": "nma_media_id_fkey",
+          "tableFrom": "note_media_alignment",
+          "tableTo": "note_media",
+          "columnsFrom": [
+            "media_id"
+          ],
+          "columnsTo": [
+            "media_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.study_note": {
+      "name": "study_note",
+      "schema": "",
+      "columns": {
+        "note_id": {
+          "name": "note_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
         "user_id": {
           "name": "user_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "comment_text": {
-          "name": "comment_text",
+        "title": {
+          "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visibility_scope": {
+          "name": "visibility_scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'private'"
+        },
+        "related_module_id": {
+          "name": "related_module_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_shared": {
+          "name": "is_shared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "shared_with_group_id": {
+          "name": "shared_with_group_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note_type": {
+          "name": "note_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'text'"
+        },
+        "collaboration_enabled": {
+          "name": "collaboration_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "collaboration_room": {
+          "name": "collaboration_room",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "collaboration_last_synced_at": {
+          "name": "collaboration_last_synced_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachments": {
+          "name": "attachments",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "like_count": {
+          "name": "like_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "view_count": {
+          "name": "view_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "last_edited_by": {
+          "name": "last_edited_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "forked_from_note_id": {
+          "name": "forked_from_note_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1222,22 +1160,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "note_comment_note_id_fkey": {
-          "name": "note_comment_note_id_fkey",
-          "tableFrom": "note_comment",
-          "tableTo": "study_note",
-          "columnsFrom": [
-            "note_id"
-          ],
-          "columnsTo": [
-            "note_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "note_comment_user_id_fkey": {
-          "name": "note_comment_user_id_fkey",
-          "tableFrom": "note_comment",
+        "study_note_user_id_fkey": {
+          "name": "study_note_user_id_fkey",
+          "tableFrom": "study_note",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
@@ -1246,6 +1171,58 @@
             "user_id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "study_note_related_module_id_fkey": {
+          "name": "study_note_related_module_id_fkey",
+          "tableFrom": "study_note",
+          "tableTo": "learning_module",
+          "columnsFrom": [
+            "related_module_id"
+          ],
+          "columnsTo": [
+            "module_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "study_note_shared_with_group_id_fkey": {
+          "name": "study_note_shared_with_group_id_fkey",
+          "tableFrom": "study_note",
+          "tableTo": "study_group",
+          "columnsFrom": [
+            "shared_with_group_id"
+          ],
+          "columnsTo": [
+            "group_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "study_note_last_edited_by_fkey": {
+          "name": "study_note_last_edited_by_fkey",
+          "tableFrom": "study_note",
+          "tableTo": "users",
+          "columnsFrom": [
+            "last_edited_by"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "study_note_forked_from_note_id_fkey": {
+          "name": "study_note_forked_from_note_id_fkey",
+          "tableFrom": "study_note",
+          "tableTo": "study_note",
+          "columnsFrom": [
+            "forked_from_note_id"
+          ],
+          "columnsTo": [
+            "note_id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -1401,20 +1378,19 @@
           "name": "module_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "path_id": {
           "name": "path_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "lesson_index": {
           "name": "lesson_index",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "default": null
+          "notNull": false
         },
         "title": {
           "name": "title",
@@ -1653,7 +1629,7 @@
         },
         "title": {
           "name": "title",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1665,17 +1641,16 @@
         },
         "topic": {
           "name": "topic",
-          "type": "varchar(100)",
+          "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "difficulty_level": {
           "name": "difficulty_level",
           "type": "difficulty_level",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'medium'"
+          "notNull": false
         },
         "estimated_duration": {
           "name": "estimated_duration",
@@ -1742,12 +1717,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "path_id": {
-          "name": "path_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "description": {
           "name": "description",
           "type": "text",
@@ -1762,12 +1731,6 @@
           "notNull": false,
           "default": "'public'"
         },
-        "settings": {
-          "name": "settings",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1781,6 +1744,18 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "path_id": {
+          "name": "path_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settings": {
+          "name": "settings",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1848,6 +1823,19 @@
           "notNull": false,
           "default": "'member'"
         },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "left_at": {
+          "name": "left_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "group_member_status",
@@ -1856,21 +1844,8 @@
           "notNull": false,
           "default": "'pending'"
         },
-        "joined_at": {
-          "name": "joined_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
         "last_active_at": {
           "name": "last_active_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "left_at": {
-          "name": "left_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -1916,196 +1891,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.study_note": {
-      "name": "study_note",
-      "schema": "",
-      "columns": {
-        "note_id": {
-          "name": "note_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility_scope": {
-          "name": "visibility_scope",
-          "type": "visibility_scope",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'private'"
-        },
-        "related_module_id": {
-          "name": "related_module_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_shared": {
-          "name": "is_shared",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "shared_with_group_id": {
-          "name": "shared_with_group_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "note_type": {
-          "name": "note_type",
-          "type": "note_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'text'"
-        },
-        "tags": {
-          "name": "tags",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attachments": {
-          "name": "attachments",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "like_count": {
-          "name": "like_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "view_count": {
-          "name": "view_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "last_edited_by": {
-          "name": "last_edited_by",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "forked_from_note_id": {
-          "name": "forked_from_note_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "study_note_user_id_fkey": {
-          "name": "study_note_user_id_fkey",
-          "tableFrom": "study_note",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "study_note_related_module_id_fkey": {
-          "name": "study_note_related_module_id_fkey",
-          "tableFrom": "study_note",
-          "tableTo": "learning_module",
-          "columnsFrom": [
-            "related_module_id"
-          ],
-          "columnsTo": [
-            "module_id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "study_note_shared_with_group_id_fkey": {
-          "name": "study_note_shared_with_group_id_fkey",
-          "tableFrom": "study_note",
-          "tableTo": "study_group",
-          "columnsFrom": [
-            "shared_with_group_id"
-          ],
-          "columnsTo": [
-            "group_id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "study_note_last_edited_by_fkey": {
-          "name": "study_note_last_edited_by_fkey",
-          "tableFrom": "study_note",
-          "tableTo": "users",
-          "columnsFrom": [
-            "last_edited_by"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "study_note_forked_from_note_id_fkey": {
-          "name": "study_note_forked_from_note_id_fkey",
-          "tableFrom": "study_note",
-          "tableTo": "study_note",
-          "columnsFrom": [
-            "forked_from_note_id"
-          ],
-          "columnsTo": [
-            "note_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2446,8 +2231,8 @@
       "name": "user_skill_assessment",
       "schema": "",
       "columns": {
-        "user_assessment_id": {
-          "name": "user_assessment_id",
+        "result_id": {
+          "name": "result_id",
           "type": "serial",
           "primaryKey": true,
           "notNull": true
@@ -2484,7 +2269,7 @@
         },
         "skill_level": {
           "name": "skill_level",
-          "type": "varchar(20)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2492,8 +2277,7 @@
           "name": "completed_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
+          "notNull": false
         },
         "metadata": {
           "name": "metadata",
@@ -2533,16 +2317,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_skill_assessment_user_id_assessment_id_key": {
-          "name": "user_skill_assessment_user_id_assessment_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "assessment_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

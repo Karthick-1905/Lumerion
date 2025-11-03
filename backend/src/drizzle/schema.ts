@@ -1,13 +1,8 @@
-import { pgTable, serial, varchar, text, jsonb, integer, timestamp, foreignKey, boolean, unique, numeric, primaryKey, pgEnum, customType } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, text, jsonb, integer, timestamp, foreignKey, boolean, unique, numeric, primaryKey, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
-const bytea = customType<{ data: Buffer }>({
-  dataType() {
-    return 'bytea';
-  },
-});
-
 export const actionEnum = pgEnum("action_enum", ['joined', 'left', 'started_whiteboard', 'ended_whiteboard', 'sent_message'])
+export const activityType = pgEnum("activity_type", ['skill_assessment_completed', 'learning_path_created', 'study_group_joined', 'study_group_created', 'friend_added', 'badge_earned', 'streak_achieved', 'learning_path_shared', 'study_group_posted'])
 export const dependencyType = pgEnum("dependency_type", ['prerequisite', 'corequisite', 'supplementary'])
 export const difficultyLevel = pgEnum("difficulty_level", ['easy', 'medium', 'hard'])
 export const groupMemberStatus = pgEnum("group_member_status", ['pending', 'active', 'removed'])
@@ -18,7 +13,6 @@ export const roleEnum = pgEnum("role_enum", ['owner', 'admin', 'moderator', 'mem
 export const statusEnum = pgEnum("status_enum", ['pending', 'accepted', 'rejected', 'blocked'])
 export const visibilityEnum = pgEnum("visibility_enum", ['public', 'private', 'restricted'])
 export const visibilityScope = pgEnum("visibility_scope", ['private', 'group', 'public'])
-export const activityType = pgEnum("activity_type", ['skill_assessment_completed', 'learning_path_created', 'study_group_joined', 'study_group_created', 'friend_added', 'badge_earned', 'streak_achieved', 'learning_path_shared', 'study_group_posted'])
 
 
 export const learningModule = pgTable("learning_module", {
@@ -218,25 +212,27 @@ export const studyGroup = pgTable("study_group", {
 		}).onDelete("cascade"),
 ]);
 
-
-export const notes = pgTable("study_note", {
+export const studyNote = pgTable("study_note", {
 	noteId: serial("note_id").primaryKey().notNull(),
 	userId: integer("user_id").notNull(),
-	title: text("title").notNull(),
-	content: jsonb("content").$type<unknown>(),
-	visibilityScope: text("visibility_scope").default("private"), 
+	title: text().notNull(),
+	content: jsonb(),
+	visibilityScope: visibilityScope("visibility_scope").default('private'),
 	relatedModuleId: integer("related_module_id"),
 	isShared: boolean("is_shared").default(false),
 	sharedWithGroupId: integer("shared_with_group_id"),
-	noteType: text("note_type").default("text"),
-	tags: jsonb("tags").$type<string[] | null>(),
-	attachments: jsonb("attachments").$type<Record<string, unknown>[] | null>(),
+	noteType: noteType("note_type").default('text'),
+	tags: jsonb(),
+	attachments: jsonb(),
 	likeCount: integer("like_count").default(0),
 	viewCount: integer("view_count").default(0),
 	lastEditedBy: integer("last_edited_by"),
 	forkedFromNoteId: integer("forked_from_note_id"),
-	createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow()
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+	collaborationEnabled: boolean("collaboration_enabled").default(true),
+	collaborationRoom: text("collaboration_room"),
+	collaborationLastSyncedAt: timestamp("collaboration_last_synced_at", { mode: 'string' }),
 }, (table) => [
 	foreignKey({
 			columns: [table.userId],
@@ -263,46 +259,6 @@ export const notes = pgTable("study_note", {
 			foreignColumns: [table.noteId],
 			name: "study_note_forked_from_note_id_fkey"
 		}),
-]);
-
-export const media = pgTable("note_media", {
-  mediaId: serial("media_id").primaryKey().notNull(),
-  noteId: integer("note_id").notNull(),
-  objectKey: text("object_key").notNull(),
-  bucketName: text("bucket_name").notNull(),
-  url: text("url").notNull(),
-	type: text("type").notNull(),
-	originalName: text("original_name").notNull(),
-	mimeType: text("mime_type").notNull(),
-	size: integer("size").notNull(),
-	metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-  createdAt: timestamp("created_at", { mode: "string" }).defaultNow()
-}, (table) => [
-  foreignKey({
-    columns: [table.noteId],
-    foreignColumns: [notes.noteId],
-    name: "note_media_note_id_fkey"
-  }).onDelete("cascade")
-]);
-
-export const noteMediaAlignment = pgTable("note_media_alignment", {
-  alignmentId: serial("alignment_id").primaryKey().notNull(),
-  noteId: integer("note_id").notNull(),
-  mediaId: integer("media_id").notNull(),
-  blockPath: text("block_path").notNull(),    // e.g., JSON-pointer path like "/blocks/3/children/0"
-  position: integer("position").notNull().default(0),  // ordering index
-  createdAt: timestamp("created_at", { mode: "string" }).defaultNow()
-}, (table) => [
-  foreignKey({
-    columns: [table.noteId],
-    foreignColumns: [notes.noteId],
-    name: "nma_note_id_fkey"
-  }).onDelete("cascade"),
-  foreignKey({
-    columns: [table.mediaId],
-    foreignColumns: [media.mediaId],
-    name: "nma_media_id_fkey"
-  }).onDelete("cascade")
 ]);
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
@@ -432,10 +388,10 @@ export const quiz = pgTable("quiz", {
 	lessonIndex: integer("lesson_index"),
 	title: text().notNull(),
 	description: text(),
-	assessmentType: varchar("assessment_type", { length: 50 }),
 	metadata: jsonb().default({}).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+	assessmentType: varchar("assessment_type", { length: 50 }),
 }, (table) => [
 	foreignKey({
 			columns: [table.moduleId],
@@ -467,42 +423,6 @@ export const quizQuestion = pgTable("quiz_question", {
 		}).onDelete("cascade"),
 ]);
 
-export const skillAssessment = pgTable("skill_assessment", {
-	assessmentId: serial("assessment_id").primaryKey().notNull(),
-	title: varchar({ length: 255 }).notNull(),
-	description: text(),
-	topic: varchar({ length: 255 }),
-	difficultyLevel: difficultyLevel("difficulty_level"),
-	estimatedDuration: integer("estimated_duration"),
-	isActive: boolean("is_active").default(true),
-	metadata: jsonb().default({}).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
-});
-
-export const userSkillAssessment = pgTable("user_skill_assessment", {
-	resultId: serial("result_id").primaryKey().notNull(),
-	userId: integer("user_id").notNull(),
-	assessmentId: integer("assessment_id").notNull(),
-	score: numeric({ precision: 5, scale: 2 }),
-	maxScore: numeric("max_score", { precision: 5, scale: 2 }),
-	percentage: numeric({ precision: 5, scale: 2 }),
-	skillLevel: varchar("skill_level", { length: 50 }),
-	completedAt: timestamp("completed_at", { mode: 'string' }),
-	metadata: jsonb().default({}).notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.userId],
-			name: "user_skill_assessment_user_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.assessmentId],
-			foreignColumns: [skillAssessment.assessmentId],
-			name: "user_skill_assessment_assessment_id_fkey"
-		}).onDelete("cascade"),
-]);
-
 export const activity = pgTable("activity", {
 	activityId: serial("activity_id").primaryKey().notNull(),
 	userId: integer("user_id").notNull(),
@@ -519,13 +439,90 @@ export const activity = pgTable("activity", {
 		}).onDelete("cascade"),
 ]);
 
+export const userSkillAssessment = pgTable("user_skill_assessment", {
+	resultId: serial("result_id").primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	assessmentId: integer("assessment_id").notNull(),
+	score: numeric({ precision: 5, scale:  2 }),
+	maxScore: numeric("max_score", { precision: 5, scale:  2 }),
+	percentage: numeric({ precision: 5, scale:  2 }),
+	skillLevel: varchar("skill_level", { length: 50 }),
+	completedAt: timestamp("completed_at", { mode: 'string' }),
+	metadata: jsonb().default({}).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.userId],
+			name: "user_skill_assessment_user_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.assessmentId],
+			foreignColumns: [skillAssessment.assessmentId],
+			name: "user_skill_assessment_assessment_id_fkey"
+		}).onDelete("cascade"),
+]);
+
+export const skillAssessment = pgTable("skill_assessment", {
+	assessmentId: serial("assessment_id").primaryKey().notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	description: text(),
+	topic: varchar({ length: 255 }),
+	difficultyLevel: difficultyLevel("difficulty_level"),
+	estimatedDuration: integer("estimated_duration"),
+	isActive: boolean("is_active").default(true),
+	metadata: jsonb().default({}).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const noteMedia = pgTable("note_media", {
+	mediaId: serial("media_id").primaryKey().notNull(),
+	noteId: integer("note_id").notNull(),
+	objectKey: text("object_key").notNull(),
+	bucketName: text("bucket_name").notNull(),
+	url: text().notNull(),
+	type: text().notNull(),
+	originalName: text("original_name").notNull(),
+	mimeType: text("mime_type").notNull(),
+	size: integer().notNull(),
+	metadata: jsonb(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.noteId],
+			foreignColumns: [studyNote.noteId],
+			name: "note_media_note_id_fkey"
+		}).onDelete("cascade"),
+]);
+
+export const noteMediaAlignment = pgTable("note_media_alignment", {
+	alignmentId: serial("alignment_id").primaryKey().notNull(),
+	noteId: integer("note_id").notNull(),
+	mediaId: integer("media_id").notNull(),
+	blockPath: text("block_path").notNull(),
+	position: integer().default(0).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.noteId],
+			foreignColumns: [studyNote.noteId],
+			name: "nma_note_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.mediaId],
+			foreignColumns: [noteMedia.mediaId],
+			name: "nma_media_id_fkey"
+		}).onDelete("cascade"),
+]);
+
 export const checkpointBlobs = pgTable("checkpoint_blobs", {
 	threadId: text("thread_id").notNull(),
 	checkpointNs: text("checkpoint_ns").default('').notNull(),
 	channel: text().notNull(),
 	version: text().notNull(),
 	type: text().notNull(),
-	blob: bytea(),
+	// TODO: failed to parse database type 'bytea'
+	blob: text(),
 }, (table) => [
 	primaryKey({ columns: [table.threadId, table.checkpointNs, table.channel, table.version], name: "checkpoint_blobs_pkey"}),
 ]);
@@ -550,7 +547,8 @@ export const checkpointWrites = pgTable("checkpoint_writes", {
 	idx: integer().notNull(),
 	channel: text().notNull(),
 	type: text(),
-	blob: bytea().notNull(),
+	// TODO: failed to parse database type 'bytea'
+	blob: text().notNull(),
 }, (table) => [
 	primaryKey({ columns: [table.threadId, table.checkpointNs, table.checkpointId, table.taskId, table.idx], name: "checkpoint_writes_pkey"}),
 ]);

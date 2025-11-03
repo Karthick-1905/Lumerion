@@ -59,6 +59,9 @@ export const API_CONFIG = {
       DETAIL: (noteId: number | string) => `/api/notes/${noteId}`,
       UPDATE: (noteId: number | string) => `/api/notes/${noteId}`,
       UPLOAD_MEDIA: (noteId: number | string) => `/api/notes/${noteId}/media`,
+      STUDY_GROUP_NOTES: (groupId: number | string) => `/api/notes/groups/${groupId}/notes`,
+      CREATE_STUDY_GROUP_NOTE: (groupId: number | string) => `/api/notes/groups/${groupId}/notes`,
+      UPDATE_SHARING: (noteId: number | string) => `/api/notes/${noteId}/sharing`,
     },
     FRIENDS: {
       LIST: (limit?: number, offset?: number) => {

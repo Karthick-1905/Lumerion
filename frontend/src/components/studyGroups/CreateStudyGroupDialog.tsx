@@ -33,8 +33,6 @@ const visibilityOptions: { label: string; value: StudyGroupVisibility; descripti
   },
 ];
 
-const meetingDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
 const CreateStudyGroupDialog = ({ isOpen, onClose, pathId, onCreated }: CreateStudyGroupDialogProps) => {
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
@@ -235,7 +233,7 @@ const CreateStudyGroupDialog = ({ isOpen, onClose, pathId, onCreated }: CreateSt
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              {/* <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs uppercase text-gray-500 font-semibold mb-2 block">Meeting Day</label>
                   <select
@@ -258,9 +256,9 @@ const CreateStudyGroupDialog = ({ isOpen, onClose, pathId, onCreated }: CreateSt
                     className="w-full bg-[#242424] border border-gray-800 rounded-xl px-4 py-3 text-gray-100 focus:border-[#7FDBCA] focus:ring-2 focus:ring-[#7FDBCA]/40 transition-all"
                   />
                 </div>
-              </div>
+              </div> */}
 
-              <div className="flex items-center justify-between px-4 py-3 bg-[#242424] border border-gray-800 rounded-xl">
+              {/* <div className="flex items-center justify-between px-4 py-3 bg-[#242424] border border-gray-800 rounded-xl">
                 <div>
                   <p className="text-sm font-medium text-white">Allow session recordings</p>
                   <p className="text-xs text-gray-400">Participants can catch up if they miss a meeting.</p>
@@ -278,10 +276,10 @@ const CreateStudyGroupDialog = ({ isOpen, onClose, pathId, onCreated }: CreateSt
                     }`}
                   />
                 </button>
-              </div>
+              </div> */}
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col items-center justify-between gap-2 pb-1">
                   <div>
                     <h3 className="text-sm font-semibold text-white">Invite Members</h3>
                     <p className="text-xs text-gray-400">Search for teammates to add them right away.</p>

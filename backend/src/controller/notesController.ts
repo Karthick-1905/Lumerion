@@ -102,8 +102,13 @@ export async function createNoteHandler(req: Request, res: Response) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const noteId = await noteService.createNote(userId, title.trim(), content, tags);
-    res.status(201).json({ noteId });
+    const { noteId, collaborationRoom } = await noteService.createNote(
+      userId,
+      title.trim(),
+      content,
+      tags
+    );
+    res.status(201).json({ noteId, collaborationRoom });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal error" });
@@ -149,6 +154,107 @@ export async function updateNoteHandler(req: Request, res: Response) {
     }
 
     await noteService.updateNote(noteId, userId, title.trim(), content, tags);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    if (err instanceof Error && err.message === "Note not found or access denied") {
+      return res.status(404).json({ error: err.message });
+    }
+    res.status(500).json({ error: "Internal error" });
+  }
+}
+
+export async function getStudyGroupNotesHandler(req: Request, res: Response) {
+  try {
+    const userId = Number(req.user_id);
+    if (!Number.isInteger(userId)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { groupId: groupIdParam } = req.params;
+    const groupId = Number(groupIdParam);
+    if (!Number.isInteger(groupId)) {
+      return res.status(400).json({ error: "Invalid group id" });
+    }
+
+    // Check if user is member of the study group
+    const isMember = await noteService.checkStudyGroupMembership(userId, groupId);
+    if (!isMember) {
+      return res.status(403).json({ error: "Access denied: not a member of this study group" });
+    }
+
+    const notes = await noteService.getStudyGroupNotes(groupId, userId);
+    res.json({ success: true, data: { notes } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal error" });
+  }
+}
+
+export async function createStudyGroupNoteHandler(req: Request, res: Response) {
+  try {
+    const userId = Number(req.user_id);
+    if (!Number.isInteger(userId)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { groupId: groupIdParam } = req.params;
+    const groupId = Number(groupIdParam);
+    if (!Number.isInteger(groupId)) {
+      return res.status(400).json({ error: "Invalid group id" });
+    }
+
+    const { title, content, tags, visibilityScope } = req.body;
+
+    if (!title || typeof title !== "string" || title.trim().length === 0) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    const validScopes = ['private', 'group', 'public'];
+    if (visibilityScope && !validScopes.includes(visibilityScope)) {
+      return res.status(400).json({ error: "Invalid visibility scope" });
+    }
+
+    const { noteId, collaborationRoom } = await noteService.createStudyGroupNote(
+      userId,
+      groupId,
+      title.trim(),
+      content,
+      tags,
+      visibilityScope || 'private'
+    );
+
+    res.status(201).json({ noteId, collaborationRoom });
+  } catch (err) {
+    console.error(err);
+    if (err instanceof Error && err.message === "User is not a member of this study group") {
+      return res.status(403).json({ error: err.message });
+    }
+    res.status(500).json({ error: "Internal error" });
+  }
+}
+
+export async function updateNoteSharingHandler(req: Request, res: Response) {
+  try {
+    const userId = Number(req.user_id);
+    if (!Number.isInteger(userId)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { noteId: noteIdParam } = req.params;
+    const noteId = Number(noteIdParam);
+    if (!Number.isInteger(noteId)) {
+      return res.status(400).json({ error: "Invalid note id" });
+    }
+
+    const { visibilityScope, groupId } = req.body;
+
+    const validScopes = ['private', 'group', 'public'];
+    if (!visibilityScope || !validScopes.includes(visibilityScope)) {
+      return res.status(400).json({ error: "Invalid visibility scope" });
+    }
+
+    await noteService.updateNoteSharing(noteId, userId, visibilityScope, groupId);
     res.json({ success: true });
   } catch (err) {
     console.error(err);

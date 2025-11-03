@@ -6,6 +6,8 @@ import type {
   UpsertNotePayload,
   UpdateNoteResponse,
   UploadMediaResponse,
+  StudyGroupNotesResponse,
+  CreateStudyGroupNotePayload,
 } from "./types";
 
 export type UploadMediaOptions = {
@@ -110,4 +112,14 @@ export const notesApi = {
     file: File,
     options?: UploadMediaOptions
   ) => uploadMediaWithProgress(noteId, file, options),
+
+  // Study group notes
+  getStudyGroupNotes: (groupId: number | string) =>
+    apiClient.get<StudyGroupNotesResponse>(API_CONFIG.ENDPOINTS.NOTES.STUDY_GROUP_NOTES(groupId)),
+
+  createStudyGroupNote: (groupId: number | string, payload: CreateStudyGroupNotePayload) =>
+    apiClient.post<CreateNoteResponse>(API_CONFIG.ENDPOINTS.NOTES.CREATE_STUDY_GROUP_NOTE(groupId), payload),
+
+  updateNoteSharing: (noteId: number | string, payload: { visibilityScope: 'private' | 'group' | 'public'; groupId?: number }) =>
+    apiClient.put<UpdateNoteResponse>(API_CONFIG.ENDPOINTS.NOTES.UPDATE_SHARING(noteId), payload),
 };

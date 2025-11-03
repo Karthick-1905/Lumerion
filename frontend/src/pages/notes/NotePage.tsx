@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useParams } from "react-router-dom";
 import type { JSONContent } from "@tiptap/react";
 
-import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
+import EditorWrapper from "./EditorWrapper";
 import { notesApi } from "../../api/notes";
 import type { Note, UpsertNotePayload } from "../../api/types";
 import useDebouncedCallback from "../../hooks/use-debounced-callback";
@@ -14,16 +14,8 @@ const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 400;
 
 type QueueMode = "idle" | "queued" | "retry-wait";
-
-type SaveQueueState = {
-  mode: QueueMode;
-  attempt: number;
-};
-
-type SaveJob = {
-  payload: UpsertNotePayload;
-  attempts: number;
-};
+type SaveQueueState = { mode: QueueMode; attempt: number; };
+type SaveJob = { payload: UpsertNotePayload; attempts: number; };
 
 const parseNoteContent = (value: unknown): JSONContent | null => {
   if (!value) return null;
@@ -40,21 +32,24 @@ const parseNoteContent = (value: unknown): JSONContent | null => {
   return null;
 };
 
+const COLLAB_ENABLED = import.meta.env.VITE_ENABLE_NOTE_COLLAB === "true";
+const COLLAB_SERVER_URL = import.meta.env.VITE_NOTE_COLLAB_WS_URL ?? "";
+
 const NotePage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const noteIdParam = searchParams.get("noteId");
+  const { noteId: noteIdParam } = useParams<{ noteId: string }>();
+  const [searchParams] = useSearchParams();
+  const collaborationAllowed = searchParams.get("collaboration") === "true";
   const queryClient = useQueryClient();
+
   const [title, setTitle] = useState<string>(UNTITLED_NOTE);
-  const [editorContent, setEditorContent] = useState<JSONContent | null>(
+  const [editorContent, setEditorContent] = useState<JSONContent>(
     fallbackContent as JSONContent
   );
   const [tags, setTags] = useState<string[]>([]);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [queueState, setQueueState] = useState<SaveQueueState>({
-    mode: "idle",
-    attempt: 0,
-  });
+  const [queueState, setQueueState] = useState<SaveQueueState>({ mode: "idle", attempt: 0 });
+
   const hasRequestedNoteRef = useRef(false);
   const saveJobRef = useRef<SaveJob | null>(null);
   const isProcessingRef = useRef(false);
@@ -62,8 +57,7 @@ const NotePage = () => {
 
   const createNoteMutation = useMutation({
     mutationFn: (payload: UpsertNotePayload) => notesApi.createNote(payload),
-    onSuccess: ({ noteId }) => {
-      setSearchParams({ noteId: String(noteId) }, { replace: true });
+    onSuccess: () => {
       setLastSavedAt(new Date());
       setQueueState({ mode: "idle", attempt: 0 });
       setSaveError(null);
@@ -85,48 +79,40 @@ const NotePage = () => {
   });
 
   const updateNoteMutation = useMutation({
-    mutationFn: ({
-      noteId,
-      payload,
-    }: {
-      noteId: string;
-      payload: UpsertNotePayload;
-    }) => notesApi.updateNote(noteId, payload),
+    mutationFn: ({ noteId, payload }: { noteId: string; payload: UpsertNotePayload }) =>
+      notesApi.updateNote(noteId, payload),
     retry: 0,
     onMutate: async ({ noteId, payload }) => {
       setSaveError(null);
       await queryClient.cancelQueries({ queryKey: ["note", noteId] });
-      const previousNote = queryClient.getQueryData<Note>(["note", noteId]);
-
-      if (previousNote) {
-        const optimisticNote: Note = {
-          ...previousNote,
+      const previous = queryClient.getQueryData<Note>(["note", noteId]);
+      if (previous) {
+        const optimistic: Note = {
+          ...previous,
           title: payload.title,
-          content: payload.content,
-          tags:
-            payload.tags !== undefined ? payload.tags : previousNote.tags,
+          content: JSON.stringify(payload.content),
+          tags: payload.tags !== undefined ? payload.tags : previous.tags,
         };
-        queryClient.setQueryData(["note", noteId], optimisticNote);
+        queryClient.setQueryData(["note", noteId], optimistic);
       }
-
-      return { previousNote };
+      return { previous };
     },
-    onError: (_error, variables, context) => {
-      if (context?.previousNote) {
-        queryClient.setQueryData(["note", variables.noteId], context.previousNote);
+    onError: (_error, vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["note", vars.noteId], context.previous);
       }
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (_data, vars) => {
       setLastSavedAt(new Date());
-      queryClient.setQueryData(["note", variables.noteId], (current?: Note) =>
+      queryClient.setQueryData(["note", vars.noteId], (current?: Note) =>
         current
           ? {
               ...current,
-              title: variables.payload.title,
-              content: variables.payload.content,
+              title: vars.payload.title,
+              content: JSON.stringify(vars.payload.content),
               tags:
-                variables.payload.tags !== undefined
-                  ? variables.payload.tags
+                vars.payload.tags !== undefined
+                  ? vars.payload.tags
                   : current.tags,
             }
           : current
@@ -135,14 +121,9 @@ const NotePage = () => {
   });
 
   const processQueue = useCallback(async () => {
-    if (!noteId || isProcessingRef.current) {
-      return;
-    }
-
+    if (!noteId || isProcessingRef.current) return;
     const job = saveJobRef.current;
-    if (!job) {
-      return;
-    }
+    if (!job) return;
 
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
@@ -154,87 +135,58 @@ const NotePage = () => {
 
     setQueueState({ mode: "queued", attempt: job.attempts });
 
-    let shouldContinueImmediately = true;
-
     try {
       await updateNoteMutation.mutateAsync({ noteId, payload: job.payload });
-      const hasNextJob = Boolean(saveJobRef.current);
-      setQueueState({
-        mode: hasNextJob ? "queued" : "idle",
-        attempt: 0,
-      });
+      const hasNext = Boolean(saveJobRef.current);
+      setQueueState({ mode: hasNext ? "queued" : "idle", attempt: 0 });
       setSaveError(null);
-    } catch (error) {
+    } catch (err) {
       const nextAttempts = job.attempts + 1;
       if (nextAttempts <= MAX_RETRY_ATTEMPTS) {
-        const delay = Math.min(
-          RETRY_BASE_DELAY_MS * 2 ** (nextAttempts - 1),
-          4000
-        );
-        saveJobRef.current = {
-          payload: job.payload,
-          attempts: nextAttempts,
-        };
+        const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** (nextAttempts - 1), 4000);
+        saveJobRef.current = { payload: job.payload, attempts: nextAttempts };
         setQueueState({ mode: "retry-wait", attempt: nextAttempts });
-        shouldContinueImmediately = false;
         retryTimeoutRef.current = setTimeout(() => {
           retryTimeoutRef.current = null;
           void processQueue();
         }, delay);
       } else {
         setQueueState({ mode: "idle", attempt: nextAttempts });
-        setSaveError(
-          "Autosave failed. We'll keep your changes here until you retry."
-        );
+        setSaveError("Autosave failed. We'll keep your changes until you retry.");
       }
     } finally {
       isProcessingRef.current = false;
-      if (shouldContinueImmediately && saveJobRef.current) {
+      if (saveJobRef.current) {
         void processQueue();
       }
     }
   }, [noteId, updateNoteMutation]);
 
-  const enqueueSave = useCallback(
-    (payload: UpsertNotePayload) => {
-      if (!noteId) return;
+  const enqueueSave = useCallback((payload: UpsertNotePayload) => {
+    if (!noteId) return;
+    setSaveError(null);
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    saveJobRef.current = { payload, attempts: 0 };
+    setQueueState({ mode: "queued", attempt: 0 });
+    if (!isProcessingRef.current) {
+      void processQueue();
+    }
+  }, [noteId, processQueue]);
 
-      setSaveError(null);
+  const debouncedSave = useDebouncedCallback((payload: UpsertNotePayload) => {
+    enqueueSave(payload);
+  }, 1000);
 
+  useEffect(() => {
+    return () => {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
       }
-
-      saveJobRef.current = {
-        payload,
-        attempts: 0,
-      };
-
-      setQueueState({ mode: "queued", attempt: 0 });
-
-      if (!isProcessingRef.current) {
-        void processQueue();
-      }
-    },
-    [noteId, processQueue]
-  );
-
-  const isLoading = createNoteMutation.isPending || noteQuery.isLoading;
-  const hasError = noteQuery.error || createNoteMutation.error;
-  const isSavingMutation = updateNoteMutation.isPending;
-
-  const debouncedSave = useDebouncedCallback(
-    (payload: UpsertNotePayload) => {
-      enqueueSave(payload);
-    },
-    1000
-  );
-
-  useEffect(() => () => debouncedSave.flush(), [debouncedSave]);
-  useEffect(() => {
-    debouncedSave.cancel();
-  }, [debouncedSave, noteId]);
+    };
+  }, []);
 
   useEffect(() => {
     saveJobRef.current = null;
@@ -247,44 +199,39 @@ const NotePage = () => {
   }, [noteId]);
 
   useEffect(() => {
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     if (!noteId && !hasRequestedNoteRef.current && !createNoteMutation.isPending) {
       hasRequestedNoteRef.current = true;
       createNoteMutation.mutate({
         title: UNTITLED_NOTE,
-        content: fallbackContent,
+        content: fallbackContent as JSONContent,
         tags: [],
       });
     }
-  }, [noteId, createNoteMutation]);
+  }, [noteId]);
 
   useEffect(() => {
-    if (!noteQuery.data) {
-      return;
+    const data = noteQuery.data;
+    if (!data) return;
+
+    if (data.title && data.title !== title) {
+      setTitle(data.title);
     }
 
-    const note = noteQuery.data;
-    setTitle(note.title ?? UNTITLED_NOTE);
+    if (
+      Array.isArray(data.tags) &&
+      JSON.stringify(data.tags) !== JSON.stringify(tags)
+    ) {
+      setTags(data.tags);
+    }
 
-    const normalizedTags = Array.isArray(note.tags)
-      ? note.tags.filter((tag): tag is string => typeof tag === "string")
-      : [];
-    setTags(normalizedTags);
-
-    const parsedContent =
-      parseNoteContent(note.content) ?? (fallbackContent as JSONContent);
-    setEditorContent(parsedContent);
+    const parsed = parseNoteContent(data.content) ?? (fallbackContent as JSONContent);
+    if (JSON.stringify(parsed) !== JSON.stringify(editorContent)) {
+      setEditorContent(parsed);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteQuery.data]);
 
-  const handlePersist = (nextTitle: string, nextContent: JSONContent | null) => {
+  const handlePersist = useCallback((nextTitle: string, nextContent: JSONContent | null) => {
     if (!noteId) return;
     const payload: UpsertNotePayload = {
       title: nextTitle || UNTITLED_NOTE,
@@ -293,53 +240,82 @@ const NotePage = () => {
     };
     setLastSavedAt(null);
     debouncedSave(payload);
-  };
+  }, [noteId, tags, debouncedSave]);
 
-  const handleTitleChange = (value: string) => {
-    if (isLoading) return;
-    setTitle(value);
-    handlePersist(value, editorContent);
-  };
+  const handleTitleChange = useCallback((value: string) => {
+    if (!noteQuery.isLoading) {
+      setTitle(value);
+      handlePersist(value, editorContent);
+    }
+  }, [noteQuery.isLoading, handlePersist, editorContent]);
 
-  const handleContentChange = (value: JSONContent) => {
-    if (isLoading) return;
-    setEditorContent(value);
-    handlePersist(title, value);
-  };
+  const handleContentChange = useCallback((value: JSONContent) => {
+    if (!noteQuery.isLoading) {
+      if (JSON.stringify(value) !== JSON.stringify(editorContent)) {
+        setEditorContent(value);
+        handlePersist(title, value);
+      }
+    }
+  }, [noteQuery.isLoading, handlePersist, title, editorContent]);
+
+  const collaborationUserId = useMemo(() => {
+    return crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  }, []);
+
+  const noteData = noteQuery.data;
+  const hasNoteData = Boolean(noteData);
+  const noteCollabRoom = noteData?.collaborationRoom;
+  const noteCollabEnabled = noteData?.collaborationEnabled;
+
+  const collaborationConfig = useMemo(() => {
+    if (!COLLAB_SERVER_URL || !noteId || !hasNoteData) return undefined;
+    const allow = COLLAB_ENABLED && collaborationAllowed && (noteCollabEnabled ?? true);
+    if (!allow) return undefined;
+    const docName = noteCollabRoom ?? `note-${noteId}`;
+    return {
+      enabled: true,
+      serverUrl: COLLAB_SERVER_URL,
+      documentName: docName,
+      params: { noteId: String(noteId) },
+      user: { id: collaborationUserId },
+    };
+  }, [noteId, hasNoteData, collaborationAllowed, noteCollabEnabled, noteCollabRoom, collaborationUserId]);
 
   const statusMessage = useMemo(() => {
-    if (isLoading) return "Preparing note…";
+    if (noteQuery.isLoading) return "Preparing note…";
     if (saveError) return saveError;
-    if (isSavingMutation) return "Saving…";
+    if (updateNoteMutation.isPending) return "Saving…";
     if (queueState.mode === "retry-wait") {
-      return `Retrying save (attempt ${Math.min(
-        queueState.attempt,
-        MAX_RETRY_ATTEMPTS
-      )} of ${MAX_RETRY_ATTEMPTS})…`;
+      return `Retrying save (attempt ${Math.min(queueState.attempt, MAX_RETRY_ATTEMPTS)} of ${MAX_RETRY_ATTEMPTS})…`;
     }
     if (queueState.mode === "queued") {
       return queueState.attempt > 0 ? "Processing queued changes…" : "Queued to save…";
     }
     if (lastSavedAt) {
-      return `Saved at ${lastSavedAt.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
+      return `Saved at ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit"})}`;
     }
     return "All changes saved";
-  }, [isLoading, isSavingMutation, lastSavedAt, queueState, saveError]);
+  }, [noteQuery.isLoading, saveError, updateNoteMutation.isPending, queueState, lastSavedAt]);
 
-  const statusTone = useMemo<"idle" | "saving" | "queued" | "error">(() => {
-    if (isLoading) return "saving";
+  const statusTone = useMemo<"idle"|"saving"|"queued"|"error">(() => {
+    if (noteQuery.isLoading) return "saving";
     if (saveError) return "error";
-    if (isSavingMutation) return "saving";
-    if (queueState.mode === "retry-wait" || queueState.mode === "queued") {
-      return "queued";
-    }
+    if (updateNoteMutation.isPending) return "saving";
+    if (queueState.mode === "retry-wait" || queueState.mode === "queued") return "queued";
     return "idle";
-  }, [isLoading, saveError, isSavingMutation, queueState]);
+  }, [noteQuery.isLoading, saveError, updateNoteMutation.isPending, queueState]);
 
-  if (hasError) {
+  if (noteQuery.isLoading) {
+    return (
+      <div className="simple-editor-wrapper">
+        <div className="simple-editor-header">
+          <p className="simple-editor-status">Loading note…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (noteQuery.error) {
     return (
       <div className="simple-editor-wrapper">
         <div className="simple-editor-header">
@@ -350,16 +326,26 @@ const NotePage = () => {
   }
 
   return (
-    <SimpleEditor
-      title={title}
-      onTitleChange={handleTitleChange}
-      content={editorContent}
-      onContentChange={handleContentChange}
-      isSaving={isLoading || isSavingMutation || queueState.mode !== "idle"}
-      statusMessage={statusMessage}
-      statusTone={statusTone}
-      disabled={isLoading}
-    />
+    <div className="simple-editor-wrapper">
+      <div className="simple-editor-header">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          disabled={noteQuery.isLoading}
+          className="title-input"
+        />
+      </div>
+      <EditorWrapper
+        content={editorContent}
+        onContentChange={handleContentChange}
+        disabled={noteQuery.isLoading}
+        collaborationConfig={collaborationConfig}
+      />
+      <div className="simple-editor-footer">
+        <p className={`status ${statusTone}`}>{statusMessage}</p>
+      </div>
+    </div>
   );
 };
 

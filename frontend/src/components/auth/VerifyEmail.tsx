@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const polygonVariants = [
   '60,35 140,35 175,110 100,165 25,110',
@@ -8,6 +8,7 @@ const polygonVariants = [
 
 export default function VerifyEmailHero() {
   const [activeShape, setActiveShape] = useState(0);
+  const polygonPoints = polygonVariants[activeShape];
 
   useEffect(() => {
     const styleTag = document.createElement('style');
@@ -38,8 +39,6 @@ export default function VerifyEmailHero() {
     return () => window.clearInterval(interval);
   }, []);
 
-  // const polygonPoints = useMemo(() => polygonVariants[activeShape], [activeShape]);
-
   return (
     <div className="flex-1 bg-[#111112] text-white px-10 py-12 md:px-14 md:py-16 flex flex-col justify-between">
       <div>
@@ -54,18 +53,18 @@ export default function VerifyEmailHero() {
 
       <div className="flex flex-col gap-8">
         <div className="relative h-56 w-full max-w-sm">
-          <div className="absolute inset-0 rounded-[32px]  blur-2xl opacity-80" />
-          <div className="absolute inset-8 rounded-[24px] " style={{ animation: 'gentleGlow 5s ease-in-out infinite' }} />
+          <div className="absolute inset-0 rounded-4xl blur-2xl opacity-80" />
+          <div className="absolute inset-8 rounded-3xl" style={{ animation: 'gentleGlow 5s ease-in-out infinite' }} />
 
           <svg className="absolute inset-0 h-full w-full drop-shadow-[0_24px_56px_rgba(0,0,0,0.55)]" viewBox="0 0 200 200" fill="none">
-            {/* <polygon
+            <polygon
               points={polygonPoints}
               stroke="url(#polyStroke)"
               strokeWidth={2.2}
               fill="rgba(255,255,255,0.04)"
               strokeLinejoin="round"
               style={{ animation: 'floatPulse 4s ease-in-out infinite' }}
-            /> */}
+            />
             <defs>
               <linearGradient id="polyStroke" x1="40" y1="30" x2="170" y2="170" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#FFFFFF" stopOpacity="0.95" />

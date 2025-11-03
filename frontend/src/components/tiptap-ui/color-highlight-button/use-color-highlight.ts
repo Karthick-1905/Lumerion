@@ -12,7 +12,6 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import {
   isMarkInSchema,
   isNodeTypeSelected,
-  isExtensionAvailable,
 } from "@/lib/tiptap-utils"
 
 // --- Icons ---
@@ -136,21 +135,15 @@ export function canColorHighlight(
   if (!editor || !editor.isEditable) return false
 
   if (mode === "mark") {
-    if (
+    return (
       !isMarkInSchema("highlight", editor) ||
       isNodeTypeSelected(editor, ["image"])
     )
-      return false
-
-    return editor.can().setMark("highlight")
+      ? false
+      : editor.can().setMark("highlight")
   } else {
-    if (!isExtensionAvailable(editor, ["nodeBackground"])) return false
-
-    try {
-      return editor.can().toggleNodeBackgroundColor("test")
-    } catch {
-      return false
-    }
+    // Node background mode not supported in Tiptap 3
+    return false
   }
 }
 
@@ -169,23 +162,8 @@ export function isColorHighlightActive(
       ? editor.isActive("highlight", { color: highlightColor })
       : editor.isActive("highlight")
   } else {
-    if (!highlightColor) return false
-
-    try {
-      const { state } = editor
-      const { selection } = state
-
-      const $pos = selection.$anchor
-      for (let depth = $pos.depth; depth >= 0; depth--) {
-        const node = $pos.node(depth)
-        if (node && node.attrs?.backgroundColor === highlightColor) {
-          return true
-        }
-      }
-      return false
-    } catch {
-      return false
-    }
+    // Node background mode not supported in Tiptap 3
+    return false
   }
 }
 
@@ -202,7 +180,8 @@ export function removeHighlight(
   if (mode === "mark") {
     return editor.chain().focus().unsetMark("highlight").run()
   } else {
-    return editor.chain().focus().unsetNodeBackgroundColor().run()
+    // Node background mode not supported in Tiptap 3
+    return false
   }
 }
 
@@ -221,7 +200,8 @@ export function shouldShowButton(props: {
   if (mode === "mark") {
     if (!isMarkInSchema("highlight", editor)) return false
   } else {
-    if (!isExtensionAvailable(editor, ["nodeBackground"])) return false
+    // Node background mode not supported in Tiptap 3
+    return false
   }
 
   if (hideWhenUnavailable && !editor.isActive("code")) {
@@ -291,16 +271,8 @@ export function useColorHighlight(config: UseColorHighlightConfig) {
 
       return true
     } else {
-      const success = editor
-        .chain()
-        .focus()
-        .toggleNodeBackgroundColor(highlightColor)
-        .run()
-
-      if (success) {
-        onApplied?.({ color: highlightColor, label, mode })
-      }
-      return success
+      // Node background mode not supported in Tiptap 3
+      return false
     }
   }, [canColorHighlightState, highlightColor, editor, label, onApplied, mode])
 

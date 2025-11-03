@@ -9,6 +9,9 @@ import {
   getNoteHandler,
   updateNoteHandler,
   uploadMediaHandler,
+  getStudyGroupNotesHandler,
+  createStudyGroupNoteHandler,
+  updateNoteSharingHandler,
 } from "../controller/notesController";
 
 const router = Router();
@@ -37,6 +40,11 @@ const upload = multer({
 router.post("/", createNoteHandler);
 router.get("/:noteId", getNoteHandler);
 router.put("/:noteId", updateNoteHandler);
+router.put("/:noteId/sharing", updateNoteSharingHandler);
 router.post("/:noteId/media", upload.single("file"), uploadMediaHandler);
+
+// Study group notes routes
+router.get("/groups/:groupId/notes", getStudyGroupNotesHandler);
+router.post("/groups/:groupId/notes", createStudyGroupNoteHandler);
 
 export default router;

@@ -8,8 +8,10 @@ import {
 } from "react"
 import {
   AnimatePresence,
-  AnimatePresenceProps,
   motion,
+} from "motion/react"
+import type {
+  AnimatePresenceProps,
   MotionProps,
   Transition,
 } from "motion/react"

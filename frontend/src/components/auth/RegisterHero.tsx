@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const polygonVariants = [
   '28,26 136,18 182,88 116,166 34,132',

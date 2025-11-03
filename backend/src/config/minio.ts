@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../drizzle";
 import 'dotenv/config'
-import { media, notes } from "../drizzle/schema";
+import { noteMedia, studyNote } from "../drizzle/schema";
 import { v4 as uuidv4 } from "uuid";
 import * as Minio from 'minio'
 
@@ -34,9 +34,9 @@ export async function uploadMedia({
   const expirySeconds = Number(process.env.MINIO_URL_EXPIRY ?? 3600);
 
   const [note] = await db
-    .select({ userId: notes.userId })
-    .from(notes)
-    .where(eq(notes.noteId, noteId))
+    .select({ userId: studyNote.userId })
+    .from(studyNote)
+    .where(eq(studyNote.noteId, noteId))
     .limit(1);
 
   if (!note) {
@@ -69,7 +69,7 @@ export async function uploadMedia({
   } as const;
 
   const [inserted] = await db
-    .insert(media)
+    .insert(noteMedia)
     .values({
       noteId,
       objectKey,
@@ -82,10 +82,10 @@ export async function uploadMedia({
       metadata,
     })
     .returning({
-      mediaId: media.mediaId,
-      url: media.url,
-      type: media.type,
-      metadata: media.metadata,
+      mediaId: noteMedia.mediaId,
+      url: noteMedia.url,
+      type: noteMedia.type,
+      metadata: noteMedia.metadata,
     });
 
   return inserted;

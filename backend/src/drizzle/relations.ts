@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, notes, media, noteMediaAlignment, passwordResetTokens, friendRequest, userFriend, studyGroupMembership, roadmapSession, userQuizAnswer, quizQuestion, quiz } from "./schema";
+import { learningModule, moduleDependency, users, oauthAccounts, userEmailVerification, learningPath, moduleCitation, citation, learningPathModule, userModuleProgress, studyGroup, studyNote, passwordResetTokens, friendRequest, userFriend, studyGroupMembership, roadmapSession, userQuizAnswer, quizQuestion, quiz, activity, userSkillAssessment, skillAssessment, noteMedia, noteMediaAlignment } from "./schema";
 
 export const moduleDependencyRelations = relations(moduleDependency, ({one}) => ({
 	learningModule: one(learningModule, {
@@ -13,7 +13,7 @@ export const learningModuleRelations = relations(learningModule, ({many}) => ({
 	moduleCitations: many(moduleCitation),
 	learningPathModules: many(learningPathModule),
 	userModuleProgresses: many(userModuleProgress),
-	studyNotes: many(notes),
+	studyNotes: many(studyNote),
 	quizzes: many(quiz),
 }));
 
@@ -30,10 +30,10 @@ export const usersRelations = relations(users, ({many}) => ({
 	learningPaths: many(learningPath),
 	userModuleProgresses: many(userModuleProgress),
 	studyGroups: many(studyGroup),
-	studyNotes_userId: many(notes, {
+	studyNotes_userId: many(studyNote, {
 		relationName: "studyNote_userId_users_userId"
 	}),
-	studyNotes_lastEditedBy: many(notes, {
+	studyNotes_lastEditedBy: many(studyNote, {
 		relationName: "studyNote_lastEditedBy_users_userId"
 	}),
 	passwordResetTokens: many(passwordResetTokens),
@@ -52,6 +52,8 @@ export const usersRelations = relations(users, ({many}) => ({
 	studyGroupMemberships: many(studyGroupMembership),
 	roadmapSessions: many(roadmapSession),
 	userQuizAnswers: many(userQuizAnswer),
+	activities: many(activity),
+	userSkillAssessments: many(userSkillAssessment),
 }));
 
 export const userEmailVerificationRelations = relations(userEmailVerification, ({one}) => ({
@@ -122,61 +124,40 @@ export const studyGroupRelations = relations(studyGroup, ({one, many}) => ({
 		fields: [studyGroup.pathId],
 		references: [learningPath.pathId]
 	}),
-	studyNotes: many(notes),
+	studyNotes: many(studyNote),
 	studyGroupMemberships: many(studyGroupMembership),
 }));
 
-export const studyNoteRelations = relations(notes, ({one, many}) => ({
+export const studyNoteRelations = relations(studyNote, ({one, many}) => ({
 	user_userId: one(users, {
-		fields: [notes.userId],
+		fields: [studyNote.userId],
 		references: [users.userId],
 		relationName: "studyNote_userId_users_userId"
 	}),
 	learningModule: one(learningModule, {
-		fields: [notes.relatedModuleId],
+		fields: [studyNote.relatedModuleId],
 		references: [learningModule.moduleId]
 	}),
 	studyGroup: one(studyGroup, {
-		fields: [notes.sharedWithGroupId],
+		fields: [studyNote.sharedWithGroupId],
 		references: [studyGroup.groupId]
 	}),
 	user_lastEditedBy: one(users, {
-		fields: [notes.lastEditedBy],
+		fields: [studyNote.lastEditedBy],
 		references: [users.userId],
 		relationName: "studyNote_lastEditedBy_users_userId"
 	}),
-	studyNote: one(notes, {
-		fields: [notes.forkedFromNoteId],
-		references: [notes.noteId],
+	studyNote: one(studyNote, {
+		fields: [studyNote.forkedFromNoteId],
+		references: [studyNote.noteId],
 		relationName: "studyNote_forkedFromNoteId_studyNote_noteId"
 	}),
-	studyNotes: many(notes, {
+	studyNotes: many(studyNote, {
 		relationName: "studyNote_forkedFromNoteId_studyNote_noteId"
 	}),
-	mediaItems: many(media),
-	mediaAlignments: many(noteMediaAlignment),
+	noteMedias: many(noteMedia),
+	noteMediaAlignments: many(noteMediaAlignment),
 }));
-
-export const noteMediaRelations = relations(media, ({one, many}) => ({
-	note: one(notes, {
-		fields: [media.noteId],
-		references: [notes.noteId]
-	}),
-	alignments: many(noteMediaAlignment),
-}));
-
-export const noteMediaAlignmentRelations = relations(noteMediaAlignment, ({one}) => ({
-	note: one(notes, {
-		fields: [noteMediaAlignment.noteId],
-		references: [notes.noteId]
-	}),
-	media: one(media, {
-		fields: [noteMediaAlignment.mediaId],
-		references: [media.mediaId]
-	}),
-}));
-
-
 
 export const passwordResetTokensRelations = relations(passwordResetTokens, ({one}) => ({
 	user: one(users, {
@@ -258,4 +239,45 @@ export const quizRelations = relations(quiz, ({one, many}) => ({
 		references: [learningPath.pathId]
 	}),
 	quizQuestions: many(quizQuestion),
+}));
+
+export const activityRelations = relations(activity, ({one}) => ({
+	user: one(users, {
+		fields: [activity.userId],
+		references: [users.userId]
+	}),
+}));
+
+export const userSkillAssessmentRelations = relations(userSkillAssessment, ({one}) => ({
+	user: one(users, {
+		fields: [userSkillAssessment.userId],
+		references: [users.userId]
+	}),
+	skillAssessment: one(skillAssessment, {
+		fields: [userSkillAssessment.assessmentId],
+		references: [skillAssessment.assessmentId]
+	}),
+}));
+
+export const skillAssessmentRelations = relations(skillAssessment, ({many}) => ({
+	userSkillAssessments: many(userSkillAssessment),
+}));
+
+export const noteMediaRelations = relations(noteMedia, ({one, many}) => ({
+	studyNote: one(studyNote, {
+		fields: [noteMedia.noteId],
+		references: [studyNote.noteId]
+	}),
+	noteMediaAlignments: many(noteMediaAlignment),
+}));
+
+export const noteMediaAlignmentRelations = relations(noteMediaAlignment, ({one}) => ({
+	studyNote: one(studyNote, {
+		fields: [noteMediaAlignment.noteId],
+		references: [studyNote.noteId]
+	}),
+	noteMedia: one(noteMedia, {
+		fields: [noteMediaAlignment.mediaId],
+		references: [noteMedia.mediaId]
+	}),
 }));
