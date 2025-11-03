@@ -6,6 +6,7 @@ import type { JSONContent } from "@tiptap/react";
 import EditorWrapper from "./EditorWrapper";
 import { notesApi } from "../../api/notes";
 import type { Note, UpsertNotePayload } from "../../api/types";
+import type { UploadHandler } from "../../components/tiptap-templates/simple/simple-editor";
 import useDebouncedCallback from "../../hooks/use-debounced-callback";
 import fallbackContent from "../../components/tiptap-templates/simple/data/content.json";
 
@@ -297,6 +298,24 @@ const NotePage = () => {
   const noteCollabRoom = noteData?.collaborationRoom;
   const noteCollabEnabled = noteData?.collaborationEnabled;
 
+  const mediaUploadHandler = useCallback<UploadHandler>(
+    async (file, onProgress, signal) => {
+      if (!noteId) {
+        throw new Error("Please save this note before uploading media.");
+      }
+
+      const response = await notesApi.uploadMedia(noteId, file, {
+        signal,
+        onProgress: (progress) => {
+          onProgress?.({ progress });
+        },
+      });
+
+      return response;
+    },
+    [noteId]
+  );
+
   const collaborationConfig = useMemo(() => {
     if (!COLLAB_SERVER_URL || !noteId || !hasNoteData) return undefined;
     const allow = COLLAB_ENABLED && collaborationAllowed && (noteCollabEnabled ?? true);
@@ -373,6 +392,7 @@ const NotePage = () => {
         statusMessage={statusMessage}
         statusTone={statusTone}
         collaborationConfig={collaborationConfig}
+        onUploadMedia={mediaUploadHandler}
       />
       <div className="simple-editor-footer">
         <p className={`status ${statusTone}`}>{statusMessage}</p>

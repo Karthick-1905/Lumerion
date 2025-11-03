@@ -7,6 +7,7 @@ import { Button } from "@/components/tiptap-ui-primitive/button"
 import { CloseIcon } from "@/components/tiptap-icons/close-icon"
 import "@/components/tiptap-node/image-upload-node/image-upload-node.scss"
 import { focusNextNode, isValidPosition } from "@/lib/tiptap-utils"
+import type { UploadMediaResponse } from "@/api/types"
 
 export interface FileItem {
   /**
@@ -32,6 +33,10 @@ export interface FileItem {
    * @optional
    */
   url?: string
+  /**
+   * Metadata returned from backend about the uploaded media
+   */
+  media?: UploadMediaResponse
   /**
    * Controller that can be used to abort the upload process
    * @optional
@@ -64,7 +69,7 @@ export interface UploadOptions {
     file: File,
     onProgress: (event: { progress: number }) => void,
     signal: AbortSignal
-  ) => Promise<string>
+  ) => Promise<UploadMediaResponse>
   /**
    * Callback triggered when a file is uploaded successfully
    * @param {string} url - URL of the successfully uploaded file
@@ -85,7 +90,7 @@ export interface UploadOptions {
 function useFileUpload(options: UploadOptions) {
   const [fileItems, setFileItems] = useState<FileItem[]>([])
 
-  const uploadFile = async (file: File): Promise<string | null> => {
+  const uploadFile = async (file: File): Promise<UploadMediaResponse | null> => {
     if (file.size > options.maxSize) {
       const error = new Error(
         `File size exceeds maximum allowed (${options.maxSize / 1024 / 1024}MB)`
@@ -112,7 +117,7 @@ function useFileUpload(options: UploadOptions) {
         throw new Error("Upload function is not defined")
       }
 
-      const url = await options.upload(
+      const media = await options.upload(
         file,
         (event: { progress: number }) => {
           setFileItems((prev) =>
@@ -124,18 +129,24 @@ function useFileUpload(options: UploadOptions) {
         abortController.signal
       )
 
-      if (!url) throw new Error("Upload failed: No URL returned")
+      if (!media || !media.url) throw new Error("Upload failed: No URL returned")
 
       if (!abortController.signal.aborted) {
         setFileItems((prev) =>
           prev.map((item) =>
             item.id === fileId
-              ? { ...item, status: "success", url, progress: 100 }
+              ? {
+                  ...item,
+                  status: "success",
+                  url: media.url,
+                  media,
+                  progress: 100,
+                }
               : item
           )
         )
-        options.onSuccess?.(url)
-        return url
+        options.onSuccess?.(media.url)
+        return media
       }
 
       return null
@@ -156,7 +167,7 @@ function useFileUpload(options: UploadOptions) {
     }
   }
 
-  const uploadFiles = async (files: File[]): Promise<string[]> => {
+  const uploadFiles = async (files: File[]): Promise<UploadMediaResponse[]> => {
     if (!files || files.length === 0) {
       options.onError?.(new Error("No files to upload"))
       return []
@@ -176,7 +187,7 @@ function useFileUpload(options: UploadOptions) {
     const results = await Promise.all(uploadPromises)
 
     // Filter out null results (failed uploads)
-    return results.filter((url): url is string => url !== null)
+    return results.filter((media): media is UploadMediaResponse => media !== null)
   }
 
   const removeFileItem = (fileId: string) => {
@@ -451,32 +462,76 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
     useFileUpload(uploadOptions)
 
   const handleUpload = async (files: File[]) => {
-    const urls = await uploadFiles(files)
+    const uploaded = await uploadFiles(files)
 
-    if (urls.length > 0) {
+    if (uploaded.length > 0) {
       const pos = props.getPos()
 
       if (isValidPosition(pos)) {
-        const imageNodes = urls.map((url, index) => {
-          const filename =
-            files[index]?.name.replace(/\.[^/.]+$/, "") || "unknown"
-          return {
-            type: extension.options.type,
-            attrs: {
-              ...extension.options,
-              src: url,
-              alt: filename,
-              title: filename,
-            },
+        const nodes: Array<Record<string, unknown>> = []
+
+        uploaded.forEach((media, index) => {
+          const fileRef = files[index]
+          const metadataRecord = (media.metadata ?? {}) as Record<string, unknown>
+          const displayName =
+            fileRef?.name?.replace(/\.[^/.]+$/, "") ||
+            (typeof metadataRecord.originalName === "string"
+              ? metadataRecord.originalName.replace(/\.[^/.]+$/, "")
+              : undefined) ||
+            media.type
+
+          if (media.type === "image") {
+            nodes.push({
+              type: extension.options.type,
+              attrs: {
+                src: media.url,
+                alt: displayName,
+                title: displayName,
+                mediaId: media.mediaId,
+              },
+            })
+            return
           }
+
+          if (media.type === "video") {
+            nodes.push({
+              type: "video",
+              attrs: {
+                src: media.url,
+                title: displayName,
+                mediaId: media.mediaId,
+                mimeType:
+                  typeof metadataRecord.mimeType === "string"
+                    ? metadataRecord.mimeType
+                    : fileRef?.type || "video/mp4",
+                poster:
+                  typeof metadataRecord.poster === "string"
+                    ? metadataRecord.poster
+                    : undefined,
+              },
+            })
+            return
+          }
+
+          nodes.push({
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: `${displayName}: ${media.url}`,
+              },
+            ],
+          })
         })
 
-        props.editor
-          .chain()
-          .focus()
-          .deleteRange({ from: pos, to: pos + props.node.nodeSize })
-          .insertContentAt(pos, imageNodes)
-          .run()
+        if (nodes.length) {
+          props.editor
+            .chain()
+            .focus()
+            .deleteRange({ from: pos, to: pos + props.node.nodeSize })
+            .insertContentAt(pos, nodes)
+            .run()
+        }
 
         focusNextNode(props.editor)
       }

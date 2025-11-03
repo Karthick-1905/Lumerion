@@ -36,6 +36,7 @@ import {
 // --- Tiptap Node ---
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension"
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
+import { VideoNode } from "@/components/tiptap-node/video-node/video-node-extension"
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "@/components/tiptap-node/code-block-node/code-block-node.scss"
 import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
@@ -43,6 +44,7 @@ import "@/components/tiptap-node/list-node/list-node.scss"
 import "@/components/tiptap-node/image-node/image-node.scss"
 import "@/components/tiptap-node/heading-node/heading-node.scss"
 import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
+import "@/components/tiptap-node/video-node/video-node.scss"
 
 // --- Tiptap UI ---
 import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu"
@@ -79,12 +81,13 @@ import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import type { UploadMediaResponse } from "@/api/types"
 
-type UploadHandler = (
+export type UploadHandler = (
   file: File,
   onProgress?: (event: { progress: number }) => void,
   signal?: AbortSignal
-) => Promise<string>
+) => Promise<UploadMediaResponse>
 
 type CollaborationUser = {
   id?: string
@@ -209,6 +212,15 @@ const ImageExtension = TiptapImage.extend({
         renderHTML: (attributes: Record<string, unknown>) =>
           typeof attributes.uploadProgress === "number"
             ? { "data-upload-progress": attributes.uploadProgress }
+            : {},
+      },
+      mediaId: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+          element.getAttribute("data-media-id"),
+        renderHTML: (attributes: Record<string, unknown>) =>
+          attributes.mediaId
+            ? { "data-media-id": String(attributes.mediaId) }
             : {},
       },
     }
@@ -450,13 +462,14 @@ const SimpleEditorComponent = ({
     list.push(TaskItem.configure({ nested: true }))
     list.push(Highlight.configure({ multicolor: true }))
     list.push(ImageExtension)
+    list.push(VideoNode)
     list.push(Typography)
     list.push(Superscript)
     list.push(Subscript)
     list.push(Selection)
     list.push(
       ImageUploadNode.configure({
-        accept: "image/*",
+        accept: "image/*,video/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
         upload: uploadMedia,
@@ -734,7 +747,7 @@ const SimpleEditorComponent = ({
         const abortController = new AbortController()
 
         try {
-          const url = await uploadMedia(
+          const media = await uploadMedia(
             file,
             (event: { progress: number }) => {
               updateImageAttributes(uploadId, {
@@ -744,11 +757,16 @@ const SimpleEditorComponent = ({
             abortController.signal
           )
 
-          updateImageAttributes(uploadId, {
-            src: url,
-            isTemporary: false,
-            uploadProgress: 100,
-          })
+          if (media.type === "image") {
+            updateImageAttributes(uploadId, {
+              src: media.url,
+              isTemporary: false,
+              uploadProgress: 100,
+            })
+          } else {
+            removeImageById(uploadId)
+            console.warn("Unsupported paste media type", media.type)
+          }
         } catch (error) {
           removeImageById(uploadId)
           if (error instanceof Error && error.name !== "AbortError") {

@@ -7,8 +7,9 @@ import {
   TextSelection,
 } from "@tiptap/pm/state"
 import type { Editor, NodeWithPos } from "@tiptap/react"
+import type { UploadMediaResponse } from "@/api/types"
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+export const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: "⌘",
@@ -357,7 +358,7 @@ export const handleImageUpload = async (
   file: File,
   onProgress?: (event: { progress: number }) => void,
   abortSignal?: AbortSignal
-): Promise<string> => {
+): Promise<UploadMediaResponse> => {
   // Validate file
   if (!file) {
     throw new Error("No file provided")
@@ -375,11 +376,34 @@ export const handleImageUpload = async (
     if (abortSignal?.aborted) {
       throw new Error("Upload cancelled")
     }
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 150))
     onProgress?.({ progress })
   }
 
-  return "/images/tiptap-ui-placeholder-image.jpg"
+  const asDataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error("Failed to prepare preview"))
+    reader.readAsDataURL(file)
+  })
+
+  const inferredType = file.type
+  const mediaKind = inferredType.startsWith("video/")
+    ? "video"
+    : inferredType.startsWith("image/")
+      ? "image"
+      : "file"
+
+  return {
+    mediaId: Number(`${Date.now()}${Math.floor(Math.random() * 1000)}`),
+    url: asDataUrl,
+    type: mediaKind,
+    metadata: {
+      originalName: file.name,
+      mimeType: inferredType || (mediaKind === "image" ? "image/*" : mediaKind === "video" ? "video/*" : "application/octet-stream"),
+      size: file.size,
+    },
+  }
 }
 
 type ProtocolOptions = {

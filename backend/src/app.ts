@@ -11,6 +11,7 @@ import AuthProvider from "./middleware/authProvider";
 import roadmap_router from "./routes/roadmapRouter";
 import notes_router from './routes/notesRouter'
 import { setupSwagger } from "./config/swagger";
+import helmet from "helmet";
 
 const app: Express = express();
 
@@ -23,8 +24,8 @@ app.use(cors(corsOptions));
 app.use(morgan("dev"));
 app.use(express.json({limit: '10mb'}));
 app.use(cookieParser())
+app.use(helmet())
 
-// Setup Swagger documentation
 setupSwagger(app);
 
 app.get("/api/health-check", (req : Request,res : Response) => {

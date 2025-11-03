@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import type { JSONContent } from "@tiptap/react";
-import { SimpleEditor, type CollaborationConfig } from "../../components/tiptap-templates/simple/simple-editor";
+import { SimpleEditor, type CollaborationConfig, type UploadHandler } from "../../components/tiptap-templates/simple/simple-editor";
 
 type EditorWrapperProps = {
   content: JSONContent;
@@ -13,6 +13,7 @@ type EditorWrapperProps = {
   statusTone?: "idle" | "saving" | "queued" | "error";
   collaborationConfig?: CollaborationConfig;
   contentKey?: string;
+  onUploadMedia?: UploadHandler;
 };
 
 type AnyFn = (...args: any[]) => any;
@@ -45,10 +46,10 @@ const EditorWrapper: React.FC<EditorWrapperProps> = ({
   statusTone = "idle",
   collaborationConfig,
   contentKey,
+  onUploadMedia,
 }) => {
   const stableContentChange = useStableEvent(onContentChange);
   const stableTitleChange = useStableEvent(onTitleChange);
-
   return (
     <SimpleEditor
       key={contentKey}
@@ -61,6 +62,7 @@ const EditorWrapper: React.FC<EditorWrapperProps> = ({
       statusMessage={statusMessage}
       statusTone={statusTone}
       collaborationConfig={collaborationConfig}
+      onUploadMedia={onUploadMedia}
     />
   );
 };
