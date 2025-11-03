@@ -1,6 +1,11 @@
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import { type BaseMessage } from "@langchain/core/messages";
-import { LearnerProfileSnapshot, RoadmapModule } from "../roadmap/state";
+import {
+    ContextBootstrapSummary,
+    LearnerProfileSnapshot,
+    PrerequisitePlanSummary,
+    RoadmapModule,
+} from "../roadmap/state";
 import { NotionNote } from "../notes/state";
 import { Quiz } from "../quizzes/state";
 
@@ -20,6 +25,22 @@ export const OrchestratorStateAnnotation = Annotation.Root({
         default: () => null,
     }),
     learnerProfile: Annotation<LearnerProfileSnapshot | null>({ 
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+    domain: Annotation<string | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+    requiresPrereqs: Annotation<boolean | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+    bootstrapSummary: Annotation<ContextBootstrapSummary | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+    prerequisitePlan: Annotation<PrerequisitePlanSummary | null>({
         reducer: (_left, right) => right,
         default: () => null,
     }),
