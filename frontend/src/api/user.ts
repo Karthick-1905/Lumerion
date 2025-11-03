@@ -30,4 +30,11 @@ export const userApi = {
   getActivityFeed: async (): Promise<ActivityFeedResponse> => {
     return apiClient.get<ActivityFeedResponse>(API_CONFIG.ENDPOINTS.USER.ACTIVITY_FEED);
   },
+
+  respondToStudyGroupInvitation: async (groupId: number, decision: 'accept' | 'decline'): Promise<{ success: boolean; message: string }> => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      API_CONFIG.ENDPOINTS.STUDY_GROUPS.RESPOND_TO_INVITATION(groupId),
+      { decision }
+    );
+  },
 };

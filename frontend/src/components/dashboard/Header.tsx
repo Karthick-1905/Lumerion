@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { getInitials } from './dashboardUtils';
+import { userApi } from '../../api/user';
 
 type QuickLink = { label: string; path: string };
 
@@ -29,6 +30,11 @@ export default function DashboardHeader({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
+  const [notificationItems, setNotificationItems] = useState<any[]>([]);
+  const [notificationCounts, setNotificationCounts] = useState<{ total: number; friendRequests: number; studyGroupInvitations: number } | null>(null);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [respondingGroups, setRespondingGroups] = useState<number[]>([]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -43,6 +49,42 @@ export default function DashboardHeader({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isProfileMenuOpen, isNotificationsOpen]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setIsLoadingNotifications(true);
+        setNotificationsError(null);
+        const res: any = await userApi.getNotifications();
+        setNotificationItems(res?.notifications ?? []);
+        setNotificationCounts(res?.counts ?? null);
+      } catch (e: any) {
+        setNotificationsError('Failed to load notifications');
+      } finally {
+        setIsLoadingNotifications(false);
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  const handleRespondToStudyGroup = async (groupId: number, decision: 'accept' | 'decline', index: number) => {
+    try {
+      setRespondingGroups(prev => [...prev, groupId]);
+      await userApi.respondToStudyGroupInvitation(groupId, decision);
+      setNotificationItems(prev => prev.filter((_, i) => i !== index));
+      setNotificationCounts(prev => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        next.total = Math.max(0, next.total - 1);
+        next.studyGroupInvitations = Math.max(0, next.studyGroupInvitations - 1);
+        return next;
+      });
+    } catch (e) {
+      // Silently fail for now; could add toast if desired
+    } finally {
+      setRespondingGroups(prev => prev.filter(id => id !== groupId));
+    }
+  };
 
   return (
     <header className="px-8 pt-6 pb-4 border-b border-primary bg-primary/80 backdrop-blur-sm sticky top-0 z-10">
@@ -84,21 +126,74 @@ export default function DashboardHeader({
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(prev => !prev)}
-              className="w-11 h-11 rounded-xl border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-[#4CAF50] hover:border-[#4CAF50] transition-all duration-200"
+              className="w-11 h-11 rounded-full border border-primary bg-secondary flex items-center justify-center text-tertiary hover:text-[#4CAF50] hover:border-[#4CAF50] transition-all duration-200"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-4.977M13 21a2 2 0 01-4 0" />
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M10 20a2 2 0 104 0h-4z" />
+                <path d="M18 8a6 6 0 10-12 0c0 5.5-2.4 7.5-2.4 7.5-.3.3-.1.8.3.8H20.1c.4 0 .6-.5.3-.8C20.4 15.5 18 13.5 18 8z" />
               </svg>
+              {notificationCounts?.total ? (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#4CAF50] text-[10px] font-bold text-white flex items-center justify-center">
+                  {notificationCounts.total}
+                </span>
+              ) : null}
             </button>
+
             {isNotificationsOpen && (
               <div className="dropdown-menu absolute right-0 mt-3 w-72 bg-secondary border border-primary rounded-2xl shadow-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-primary">Notifications</h3>
-                  <span className="text-xs text-muted">Coming soon</span>
+                  {notificationCounts ? (
+                    <span className="text-xs text-muted">Total: {notificationCounts.total}</span>
+                  ) : null}
                 </div>
-                <p className="text-tertiary text-sm">
-                  You'll see roadmap updates, study group invites, and more here once notifications are enabled.
-                </p>
+                {isLoadingNotifications ? (
+                  <p className="text-tertiary text-sm">Loading...</p>
+                ) : notificationsError ? (
+                  <p className="text-red-400 text-sm">{notificationsError}</p>
+                ) : notificationItems.length === 0 ? (
+                  <p className="text-tertiary text-sm">No notifications.</p>
+                ) : (
+                  <ul className="space-y-2 max-h-72 overflow-y-auto">
+                    {notificationItems.map((n, idx) => (
+                      <li key={idx} className="p-2 rounded-xl hover:bg-hover">
+                        <div className="flex items-start gap-2">
+                          <div className="w-8 h-8 rounded-full bg-tertiary flex items-center justify-center text-xs text-primary">
+                            {(n?.type ?? 'sys').toString().slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-primary truncate">
+                              {n?.type === 'study_group_invitation'
+                                ? `${n?.inviter?.userName ?? 'Someone'} invited you to join ${n?.group?.groupName ?? 'a group'}`
+                                : n?.message ?? 'Notification'}
+                            </p>
+                            <p className="text-xs text-muted truncate">
+                              {n?.createdAt}
+                            </p>
+                            {n?.type === 'study_group_invitation' && n?.group?.groupId ? (
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  className="px-3 py-1 text-xs rounded-lg bg-[#2E7D32] text-white disabled:opacity-60"
+                                  disabled={respondingGroups.includes(n.group.groupId)}
+                                  onClick={() => handleRespondToStudyGroup(Number(n.group.groupId), 'accept', idx)}
+                                >
+                                  {respondingGroups.includes(n.group.groupId) ? 'Accepting...' : 'Accept'}
+                                </button>
+                                <button
+                                  className="px-3 py-1 text-xs rounded-lg border border-primary text-tertiary hover:text-primary disabled:opacity-60"
+                                  disabled={respondingGroups.includes(n.group.groupId)}
+                                  onClick={() => handleRespondToStudyGroup(Number(n.group.groupId), 'decline', idx)}
+                                >
+                                  {respondingGroups.includes(n.group.groupId) ? 'Declining...' : 'Decline'}
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>
