@@ -361,9 +361,14 @@ const SimpleEditorComponent = ({
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
   const onContentChangeRef = useRef<typeof onContentChange>(undefined)
-  const uploadMedia = onUploadMedia ?? (async (file, onProgress, signal) => {
-    return handleImageUpload(file, onProgress, signal)
-  })
+  const uploadMedia = useMemo<UploadHandler>(() => {
+    if (onUploadMedia) {
+      return onUploadMedia
+    }
+    return async (file, onProgress, signal) => {
+      return handleImageUpload(file, onProgress, signal)
+    }
+  }, [onUploadMedia])
   const tempUploadsRef = useRef<Map<string, string>>(new Map())
   const processPastedImagesRef = useRef<(files: File[]) => Promise<void>>(
     async () => {}
@@ -412,7 +417,13 @@ const SimpleEditorComponent = ({
       }
     )
     return { doc, provider }
-  }, [stableCollaborationConfig?.serverUrl, stableCollaborationConfig?.documentName, collabParamsKey])
+  }, [
+    isCollaborationEnabled,
+    stableCollaborationConfig?.serverUrl,
+    stableCollaborationConfig?.documentName,
+    stableCollaborationConfig?.token,
+    collabParamsKey,
+  ])
 
   const initialContentRef = useRef<JSONContent | null>(null)
   // Ensure we only apply `content` prop once if not collab
@@ -448,9 +459,7 @@ const SimpleEditorComponent = ({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: onUploadMedia ?? (async (file, onProgress, signal) => {
-          return handleImageUpload(file, onProgress, signal)
-        }),
+        upload: uploadMedia,
         onError: (error: Error) => console.error("Upload failed:", error),
       })
     )
@@ -469,7 +478,7 @@ const SimpleEditorComponent = ({
       }))
     }
     return list
-  }, [isCollaborationEnabled, collaborationRuntime, stableCollaborationConfig?.field, stableCollaborationConfig?.user, onUploadMedia])
+  }, [isCollaborationEnabled, collaborationRuntime, stableCollaborationConfig?.field, stableCollaborationConfig?.user, uploadMedia])
 
   const [collaborationStatus, setCollaborationStatus] = useState<
     "connecting" | "connected" | "disconnected"
@@ -555,7 +564,7 @@ const SimpleEditorComponent = ({
   const editor = useEditor({
     extensions: stableExtensions,
     content: !isCollaborationEnabled ? initialContentRef.current ?? undefined : undefined,
-    immediatelyRender: false,
+    immediatelyRender: true,
     shouldRerenderOnTransaction: false,
     editorProps: {
       attributes: {

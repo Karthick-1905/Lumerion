@@ -41,10 +41,15 @@ const NotePage = () => {
   const collaborationAllowed = searchParams.get("collaboration") === "true";
   const queryClient = useQueryClient();
 
+  const fallbackJSON = useMemo(() => fallbackContent as JSONContent, []);
+  const fallbackSerialized = useMemo(() => JSON.stringify(fallbackContent), []);
+
   const [title, setTitle] = useState<string>(UNTITLED_NOTE);
-  const [editorContent, setEditorContent] = useState<JSONContent>(
-    fallbackContent as JSONContent
-  );
+  const titleRef = useRef<string>(UNTITLED_NOTE);
+  const [initialEditorContent, setInitialEditorContent] = useState<JSONContent>(fallbackJSON);
+  const editorContentRef = useRef<JSONContent>(fallbackJSON);
+  const editorContentSerializedRef = useRef<string>(fallbackSerialized);
+  const [contentRevision, setContentRevision] = useState(0);
   const [tags, setTags] = useState<string[]>([]);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -210,10 +215,23 @@ const NotePage = () => {
   }, [noteId]);
 
   useEffect(() => {
+    if (noteId) {
+      return;
+    }
+    titleRef.current = UNTITLED_NOTE;
+    setTitle(UNTITLED_NOTE);
+    editorContentRef.current = fallbackJSON;
+    editorContentSerializedRef.current = fallbackSerialized;
+    setInitialEditorContent(fallbackJSON);
+    setContentRevision((prev) => prev + 1);
+  }, [noteId, fallbackJSON, fallbackSerialized]);
+
+  useEffect(() => {
     const data = noteQuery.data;
     if (!data) return;
 
-    if (data.title && data.title !== title) {
+    if (data.title && data.title !== titleRef.current) {
+      titleRef.current = data.title;
       setTitle(data.title);
     }
 
@@ -224,9 +242,13 @@ const NotePage = () => {
       setTags(data.tags);
     }
 
-    const parsed = parseNoteContent(data.content) ?? (fallbackContent as JSONContent);
-    if (JSON.stringify(parsed) !== JSON.stringify(editorContent)) {
-      setEditorContent(parsed);
+    const parsed = parseNoteContent(data.content) ?? fallbackJSON;
+    const serialized = JSON.stringify(parsed);
+    if (serialized !== editorContentSerializedRef.current) {
+      editorContentRef.current = parsed;
+      editorContentSerializedRef.current = serialized;
+      setInitialEditorContent(parsed);
+      setContentRevision((prev) => prev + 1);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteQuery.data]);
@@ -235,28 +257,36 @@ const NotePage = () => {
     if (!noteId) return;
     const payload: UpsertNotePayload = {
       title: nextTitle || UNTITLED_NOTE,
-      content: nextContent ?? (fallbackContent as JSONContent),
+      content: nextContent ?? fallbackJSON,
       tags,
     };
     setLastSavedAt(null);
     debouncedSave(payload);
-  }, [noteId, tags, debouncedSave]);
+  }, [noteId, tags, debouncedSave, fallbackJSON]);
 
   const handleTitleChange = useCallback((value: string) => {
-    if (!noteQuery.isLoading) {
-      setTitle(value);
-      handlePersist(value, editorContent);
+    if (noteQuery.isLoading) return;
+    if (value === titleRef.current) {
+      return;
     }
-  }, [noteQuery.isLoading, handlePersist, editorContent]);
+    titleRef.current = value;
+    setTitle(value);
+    handlePersist(value, editorContentRef.current);
+  }, [noteQuery.isLoading, handlePersist]);
 
   const handleContentChange = useCallback((value: JSONContent) => {
-    if (!noteQuery.isLoading) {
-      if (JSON.stringify(value) !== JSON.stringify(editorContent)) {
-        setEditorContent(value);
-        handlePersist(title, value);
-      }
+    if (noteQuery.isLoading) return;
+    if (value === editorContentRef.current) {
+      return;
     }
-  }, [noteQuery.isLoading, handlePersist, title, editorContent]);
+    const serialized = JSON.stringify(value);
+    if (serialized === editorContentSerializedRef.current) {
+      return;
+    }
+    editorContentRef.current = value;
+    editorContentSerializedRef.current = serialized;
+    handlePersist(titleRef.current, value);
+  }, [noteQuery.isLoading, handlePersist]);
 
   const collaborationUserId = useMemo(() => {
     return crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
@@ -280,6 +310,11 @@ const NotePage = () => {
       user: { id: collaborationUserId },
     };
   }, [noteId, hasNoteData, collaborationAllowed, noteCollabEnabled, noteCollabRoom, collaborationUserId]);
+
+  const editorInstanceKey = useMemo(() => `${noteId ?? "new"}-${contentRevision}`, [noteId, contentRevision]);
+  const editorIsSaving = useMemo(() => {
+    return updateNoteMutation.isPending || queueState.mode === "queued" || queueState.mode === "retry-wait";
+  }, [updateNoteMutation.isPending, queueState.mode]);
 
   const statusMessage = useMemo(() => {
     if (noteQuery.isLoading) return "Preparing note…";
@@ -327,19 +362,16 @@ const NotePage = () => {
 
   return (
     <div className="simple-editor-wrapper">
-      <div className="simple-editor-header">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => handleTitleChange(e.target.value)}
-          disabled={noteQuery.isLoading}
-          className="title-input"
-        />
-      </div>
       <EditorWrapper
-        content={editorContent}
+        content={initialEditorContent}
+        contentKey={editorInstanceKey}
+        title={title}
+        onTitleChange={handleTitleChange}
         onContentChange={handleContentChange}
         disabled={noteQuery.isLoading}
+        isSaving={editorIsSaving}
+        statusMessage={statusMessage}
+        statusTone={statusTone}
         collaborationConfig={collaborationConfig}
       />
       <div className="simple-editor-footer">

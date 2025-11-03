@@ -1,44 +1,68 @@
-// src/components/EditorWrapper.tsx
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import type { JSONContent } from "@tiptap/react";
 import { SimpleEditor, type CollaborationConfig } from "../../components/tiptap-templates/simple/simple-editor";
 
-interface EditorWrapperProps {
+type EditorWrapperProps = {
   content: JSONContent;
+  title: string;
+  onTitleChange: (title: string) => void;
   onContentChange: (value: JSONContent) => void;
   disabled?: boolean;
+  isSaving?: boolean;
+  statusMessage?: string;
+  statusTone?: "idle" | "saving" | "queued" | "error";
   collaborationConfig?: CollaborationConfig;
-}
+  contentKey?: string;
+};
+
+type AnyFn = (...args: any[]) => any;
+
+const useStableEvent = <Fn extends AnyFn | undefined>(handler: Fn) => {
+  const handlerRef = useRef<Fn>(handler);
+
+  useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
+
+  return useCallback((...args: Fn extends AnyFn ? Parameters<Fn> : never) => {
+    const current = handlerRef.current;
+    if (typeof current === "function") {
+      (current as AnyFn)(...args);
+    }
+  }, []) as Fn extends AnyFn
+    ? (...args: Parameters<Fn>) => ReturnType<Fn>
+    : () => void;
+};
 
 const EditorWrapper: React.FC<EditorWrapperProps> = ({
   content,
+  title,
+  onTitleChange,
   onContentChange,
   disabled = false,
+  isSaving = false,
+  statusMessage,
+  statusTone = "idle",
   collaborationConfig,
+  contentKey,
 }) => {
-  const initialContentRef = useRef<JSONContent>(content);
+  const stableContentChange = useStableEvent(onContentChange);
+  const stableTitleChange = useStableEvent(onTitleChange);
 
-  // Only re-render default content when `content` prop meaningful changes
-  useEffect(() => {
-    if (initialContentRef.current !== content) {
-      initialContentRef.current = content;
-    }
-  }, [content]);
-
-  // We memoize the SimpleEditor to avoid re‐mounting on parent state changes
-  const editorElement = useMemo(() => {
-    return (
-      <SimpleEditor
-        content={initialContentRef.current}
-        disabled={disabled}
-        onContentChange={onContentChange}
-        collaborationConfig={collaborationConfig}
-      />
-    );
-  // Only recreate when key props change:
-  }, [onContentChange, disabled, collaborationConfig]);
-
-  return <>{editorElement}</>;
+  return (
+    <SimpleEditor
+      key={contentKey}
+      title={title}
+      onTitleChange={stableTitleChange}
+      content={content}
+      onContentChange={stableContentChange}
+      disabled={disabled}
+      isSaving={isSaving}
+      statusMessage={statusMessage}
+      statusTone={statusTone}
+      collaborationConfig={collaborationConfig}
+    />
+  );
 };
 
 export default React.memo(EditorWrapper);

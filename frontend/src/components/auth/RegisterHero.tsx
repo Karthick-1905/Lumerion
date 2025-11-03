@@ -60,7 +60,7 @@ export default function RegisterHero() {
 
       <div className="mt-12 flex flex-col gap-8">
         <div className="relative h-56 w-full max-w-sm">
-          <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-[#202028] via-[#16161C] to-[#101015] opacity-80 blur-2xl" />
+          <div className="absolute inset-0 bg-linear-to-br from-[#202028] via-[#16161C] to-[#101015] opacity-80 blur-2xl" />
           <svg className="absolute inset-0 h-full w-full drop-shadow-[0_20px_45px_rgba(0,0,0,0.55)]" viewBox="0 0 200 200" fill="none">
             <polygon
               points={polygonPoints}

@@ -365,7 +365,7 @@ const CreateStudyGroupDialog = ({ isOpen, onClose, pathId, onCreated }: CreateSt
               className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 isSubmitting
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[#7FDBCA] to-[#00CC99] text-[#0B1F1A] shadow-lg shadow-[#7FDBCA]/20 hover:shadow-xl'
+                  : 'bg-linear-to-r from-[#7FDBCA] to-[#00CC99] text-[#0B1F1A] shadow-lg shadow-[#7FDBCA]/20 hover:shadow-xl'
               }`}
             >
               {isSubmitting ? 'Creating...' : 'Create Study Group'}
