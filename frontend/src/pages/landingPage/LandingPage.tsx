@@ -408,7 +408,7 @@ const LandingPage = () => {
           </div>
 
           <div className="mt-8 border-t border-gray-800 pt-8 text-center">
-            <p className="text-sm text-gray-500">&copy; 2025 ADL LMS. All rights reserved.</p>
+            <p className="text-sm text-gray-500">&copy; 2025 Lumerion. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -18,7 +18,7 @@ const router = Router();
 
 const TEMP_UPLOAD_DIR = process.env.NOTE_MEDIA_TEMP_DIR
   ? path.resolve(process.env.NOTE_MEDIA_TEMP_DIR)
-  : path.join(tmpdir(), "adl-lms", "upload-cache");
+  : path.join(tmpdir(), "Lumerion", "upload-cache");
 
 fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
 

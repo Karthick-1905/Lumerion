@@ -1,4 +1,4 @@
-# 🎨 ADL LMS Frontend
+# Lumerion Frontend
 
 [![React](https://img.shields.io/badge/React-19+-61dafb.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-blue.svg)](https://www.typescriptlang.org/)
@@ -6,7 +6,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1+-38bdf8.svg)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modern, responsive React SPA for ADL LMS featuring beautiful UI components, real-time data fetching, and an exceptional user experience built with cutting-edge web technologies.
+A modern, responsive React SPA for Lumerion featuring beautiful UI components, real-time data fetching, and an exceptional user experience built with cutting-edge web technologies.
 
 ## Features
 
@@ -126,7 +126,7 @@ Create a `.env` file in the frontend root directory:
 VITE_API_BASE_URL=http://localhost:8000
 
 # Optional: Additional configuration
-VITE_APP_NAME=ADL LMS
+VITE_APP_NAME=Lumerion
 VITE_APP_VERSION=1.0.0
 ```
 
@@ -269,7 +269,7 @@ CMD ["nginx", "-g", "daemon off;"]
 ### Environment Variables for Production
 ```env
 VITE_API_BASE_URL=https://your-api-domain.com
-VITE_APP_NAME=ADL LMS
+VITE_APP_NAME=Lumerion
 VITE_APP_VERSION=1.0.0
 ```
 

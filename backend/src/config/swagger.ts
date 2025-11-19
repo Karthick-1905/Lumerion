@@ -6,9 +6,9 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'ADL LMS API',
+      title: 'LumerionAPI',
       version: '1.0.0',
-      description: 'API documentation for ADL Learning Management System',
+      description: 'API documentation for Lumerion',
     },
     servers: [
       {
@@ -38,7 +38,7 @@ const specs = swaggerJsdoc(options);
 export const setupSwagger = (app: Express): void => {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'ADL LMS API Documentation',
+    customSiteTitle: 'Lumerion API Documentation',
   }));
   app.use("/api-docs.json", async (req : Request, res: Response) => {
     res.setHeader('Content-Type', 'application/json');

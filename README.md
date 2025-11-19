@@ -1,4 +1,4 @@
-# 🎓 ADL LMS - Advanced Digital Learning Management System
+# 🎓 Lumerion - Digital Learning Management System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -35,7 +35,7 @@ A comprehensive, AI-powered Learning Management System (LMS) designed to provide
 ##  Architecture
 
 ```
-adl_lms/
+Lumerion/
 ├── backend/                 # Node.js/Express API server
 │   ├── src/
 │   │   ├── agents/         # AI agents (LangChain/LangGraph)
@@ -72,8 +72,8 @@ adl_lms/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Karthick-1905/adl_lms.git
-   cd adl_lms
+   git clone https://github.com/Karthick-1905/Lumerion.git
+   cd Lumerion
    ```
 
 2. **Backend Setup**
@@ -122,7 +122,7 @@ adl_lms/
 ### Backend (.env)
 ```env
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/adl_lms
+DATABASE_URL=postgresql://user:password@localhost:5432/Lumerion
 
 # Redis (optional)
 REDIS_URL=redis://localhost:6379

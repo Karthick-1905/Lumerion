@@ -1,4 +1,4 @@
-# 🎯 ADL LMS Backend
+# 🎯 Lumerion Backend
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)](https://www.typescriptlang.org/)
@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The powerful backend API server for ADL LMS, built with Node.js, TypeScript, and Express. Features AI-powered learning path generation, comprehensive user management, and real-time social features.
+The powerful backend API server for Lumerion, built with Node.js, TypeScript, and Express. Features AI-powered learning path generation, comprehensive user management, and real-time social features.
 
 ## Features
 
@@ -96,7 +96,7 @@ backend/
 4. **Database Setup**
    ```bash
    # Create PostgreSQL database
-   createdb adl_lms
+   createdb Lumerion
 
    # Run migrations
    npm run db:migrate
@@ -117,7 +117,7 @@ Create a `.env` file in the backend root directory:
 
 ```env
 # Database Configuration
-DATABASE_URL=postgresql://username:password@localhost:5432/adl_lms
+DATABASE_URL=postgresql://username:password@localhost:5432/Lumerion
 
 # Redis Configuration (Optional)
 REDIS_URL=redis://localhost:6379

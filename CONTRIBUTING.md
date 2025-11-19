@@ -1,4 +1,4 @@
-#  Contributing to ADL LMS
+#  Contributing to Lumerion
 
 We welcome contributions from the community! This document provides guidelines and information for contributors.
 
@@ -36,8 +36,8 @@ This project follows a code of conduct to ensure a welcoming environment for all
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/adl_lms.git
-   cd adl_lms
+   git clone https://github.com/YOUR_USERNAME/Lumerion.git
+   cd Lumerion
    ```
 
 2. **Backend Setup**
@@ -103,7 +103,7 @@ docs(readme): update installation instructions
 ## Project Structure
 
 ```
-adl_lms/
+Lumerion/
 ├── backend/                 # Node.js/Express API
 │   ├── src/
 │   │   ├── agents/         # AI agents (LangChain)
@@ -299,4 +299,4 @@ Contributors will be recognized in:
 - Changelog for significant contributions
 - Project documentation
 
-Thank you for contributing to ADL LMS! 
+Thank you for contributing to Lumerion! 
