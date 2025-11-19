@@ -6,7 +6,7 @@
 [![React](https://img.shields.io/badge/React-19+-61dafb.svg)](https://reactjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)
 
-A comprehensive, AI-powered Learning Management System (LMS) designed to revolutionize digital education through personalized learning paths, collaborative study groups, and intelligent progress tracking.
+A comprehensive, AI-powered Learning Management System (LMS) designed to provide digital education through personalized learning paths, collaborative study groups, and intelligent progress tracking.
 
 ##  Features
 
