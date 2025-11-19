@@ -337,12 +337,3 @@ const save = useDebouncedCallback((payload) => notesApi.updateNote(noteId, paylo
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/Karthick-1905/adl_lms/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Karthick-1905/adl_lms/discussions)
-
----
-
-**Part of the ADL LMS ecosystem** - [Main Repository](https://github.com/Karthick-1905/adl_lms)

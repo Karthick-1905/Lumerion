@@ -261,10 +261,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Tailwind CSS**: For beautiful, responsive UI components
 - **Express.js**: For robust API development
 
-##  Support
-
-- **Issues**: [GitHub Issues](https://github.com/Karthick-1905/adl_lms/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Karthick-1905/adl_lms/discussions)
-- **Email**: karthick@example.com
-
----
