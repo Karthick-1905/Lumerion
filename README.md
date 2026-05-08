@@ -219,36 +219,6 @@ The backend provides comprehensive API documentation via Swagger UI:
 - **Authentication**: JWT Bearer token required for protected endpoints
 - **Format**: OpenAPI 3.0 specification
 
-### Key Endpoints
-
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User authentication
-- `GET /api/user/learning-paths` - Get user's learning paths
-- `POST /api/roadmap/generate` - Generate AI-powered learning roadmap
-- `GET /api/user/skill-assessments` - Get available skill assessments
-- `GET /api/user/activity-feed` - Get social activity feed
-
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Workflow
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Ensure all tests pass: `npm test`
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-### Code Style
-
-- **TypeScript**: Strict type checking enabled
-- **ESLint**: Code linting and formatting
-- **Prettier**: Consistent code formatting
-- **Husky**: Pre-commit hooks for quality assurance
-
 ##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
